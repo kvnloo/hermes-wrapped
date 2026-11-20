@@ -5,3 +5,4 @@ demo-*.mp4
 mood-sampler.mp3
 *.mp4
 *.wav
+stats/node_modules/

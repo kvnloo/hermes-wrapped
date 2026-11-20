@@ -85,19 +85,28 @@ hermes wrapped list
 
 Videos are saved to `~/.hermes/cache/videos/`.
 
-## Local usage overview
+## Stats dashboard
 
-Run `hermes wrapped stats --days 30` and open the printed HTML path in a browser. The default is seven UTC calendar days. Run the command again to refresh. The page shows session records, tool calls, input and output tokens, and recorded estimated cost. It groups lifetime counters by each record's start date, not by request time.
+Run `hermes wrapped stats` (or `bin/hermes-wrapped stats` from a checkout) and open http://127.0.0.1:8800/. `--port` picks another port. It is the [Oh My Pi](https://github.com/can1357/oh-my-pi) `omp stats` dashboard, forked from `packages/stats` (MIT, see `stats/LICENSE`), with its data layer swapped for Hermes and z0live:
 
-The command reads only the active profile's session counters. It writes a private temporary file with no chat content, scripts, or external assets. It does not start a server or deliver the file to chat. See the [stats and event trace plan](docs/PLAN-event-trace.md) for the dashboard and live trace work.
+- Usage: Overview, Models, Providers and Costs, across every Hermes profile (`~/.hermes/state.db` and `~/.hermes/profiles/*/state.db`).
+- Activity: Requests, Errors and Traces, plus Calls for z0live voice calls (turn gap, hand-off latency p50/p90, lane timings).
+- Insights: Tools, Frustration (from z0live's per-turn `user.reaction` flags) and Projects.
 
-To run the offline tests from a checkout named `hermes-wrapped`, install `pytest` and run `(cd tests && python3 -m pytest --rootdir=. --confcutdir=. -q)`.
+The dashboard reads metadata only: ids, timestamps, model and provider names, token counts, costs, tool names, error kinds and counts. It never selects message content, titles, prompts, tool arguments or transcripts, and it opens every store read-only. The server binds 127.0.0.1 and answers only to loopback Host headers.
 
-## Event timeline
+What Hermes does not record stays unknown rather than zero:
 
-Run `hermes wrapped timeline --output ./timeline.html` to render the last 24 hours. Select Hermes, Voice, or Both, then expand a lane for exact UTC times. Voice duration uses the recorded monotonic clock. Hermes duration is inferred from session boundaries, not time spent working. Missing boundaries stay unknown. `--hours` changes the window; `--db` and `--voice-dir` override the active profile and local voice trace directory.
+- Hermes stores token usage and cost per session and model, not per request. Each assistant message gets an equal share of its session's usage, so totals reconcile exactly with the store.
+- Request duration is the gap from the previous message (idle gaps over 30 minutes count as unknown). There is no time to first token.
+- Cost is the recorded actual cost, else the estimate, with no input/output/cache split.
+- Omp's Gain and Spotlight pages and its subscription-window panels are dropped: Hermes has no data for them. Frustration does not judge typed chats, because that would mean reading message text.
 
-Add `--watch` to regenerate the file every 15 seconds while the command runs. Open it through a trusted local or private HTTP host for browser refresh. Pause refresh or open a lane to inspect it. The command opens no listener and never delivers the file to chat. The page includes activity timestamps, so do not publish it to a public host.
+`hermes wrapped stats --snapshot PATH` writes one self-contained HTML file with every page's data inline and no server. The snapshot shows when it was built and does not refresh.
+
+The client lives in `stats/`. Rebuild it after changing it with `(cd stats && bun install && bun run check && bun run build)`. The built `stats/dist` is committed so the plugin needs no JavaScript toolchain.
+
+To run the offline tests from a checkout, run `python3 -m unittest discover -s tests`.
 
 ## How "upkeep" is decided
 

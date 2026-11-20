@@ -1,0 +1,21 @@
+{
+	"name": "hermes-wrapped-stats",
+	"private": true,
+	"type": "module",
+	"description": "Hermes Wrapped's stats dashboard client, forked from Oh My Pi's packages/stats (MIT)",
+	"license": "MIT",
+	"scripts": {
+		"build": "bun run build.ts",
+		"check": "tsc --noEmit -p tsconfig.json"
+	},
+	"dependencies": {
+		"lucide-react": "^1.24.0",
+		"react": "19.2.7",
+		"react-dom": "19.2.7"
+	},
+	"devDependencies": {
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"typescript": "^5.9.3"
+	}
+}

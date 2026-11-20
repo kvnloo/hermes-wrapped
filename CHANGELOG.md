@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `hermes wrapped stats` is now Oh My Pi's `omp stats` dashboard (forked from `packages/stats`, MIT), served on 127.0.0.1:8800 over every Hermes profile and z0live voice traces, metadata only. `--snapshot PATH` writes a self-contained static page. Adds a Calls page for z0live and a voice-reaction Frustration page; drops Gain, Spotlight and subscription windows, which Hermes cannot fill. Replaces the earlier stats page and event timeline. Test: `tests/test_stats_adapter.py`.
+
 ## 0.1.2
 
 - Security (catalog review): `npx hyperframes` (and the headless Chrome it downloads) and the ffmpeg re-encode now run with an explicit minimal environment (PATH, HOME, LANG, TMPDIR, proxy/cert and npm/Chrome cache variables only) instead of inheriting the whole Hermes environment, so provider API keys and tokens never reach them. Test: `test_render_subprocess_env_is_minimal`.

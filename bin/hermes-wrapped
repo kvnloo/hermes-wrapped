@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Run the Hermes Wrapped CLI from a checkout, e.g. `bin/hermes-wrapped stats --port 8800`."""
+import argparse
+import importlib.util
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+spec = importlib.util.spec_from_file_location(
+    "hermes_wrapped", ROOT / "__init__.py", submodule_search_locations=[str(ROOT)])
+plugin = importlib.util.module_from_spec(spec)
+sys.modules["hermes_wrapped"] = plugin
+spec.loader.exec_module(plugin)
+
+parser = argparse.ArgumentParser(prog="hermes-wrapped")
+plugin._cli_setup(parser)
+sys.exit(plugin._cli(parser.parse_args()))

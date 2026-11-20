@@ -1,0 +1,17 @@
+{
+	"include": ["src/client", "src/shared-types.ts"],
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"strict": true,
+		"noEmit": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true,
+		"types": []
+	}
+}
