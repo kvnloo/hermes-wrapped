@@ -484,12 +484,19 @@ def _cli_setup(sub) -> None:
     sp.add_parser("list", help="Recent sessions")
     stats = sp.add_parser("stats", help="Write a private, offline usage overview as HTML")
     stats.add_argument("--days", type=int, default=7, metavar="N", help="UTC calendar days (1–365)")
+    from .trace_view import setup_cli as setup_trace
+
+    setup_trace(sp.add_parser("timeline", help="Write a metadata-only HTML timeline"))
     sp.add_parser("doctor", help="Check Node, npx and ffmpeg")
     sub.set_defaults(func=_cli)
 
 
 def _cli(args) -> int:
     cmd = getattr(args, "wrapped_cmd", None) or ""
+    if cmd == "timeline":
+        from .trace_view import run_cli as run_trace
+
+        return run_trace(args)
     if cmd == "stats":
         import sqlite3
         import sys

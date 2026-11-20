@@ -93,6 +93,12 @@ The command reads only the active profile's session counters. It writes a privat
 
 To run the offline tests from a checkout named `hermes-wrapped`, install `pytest` and run `(cd tests && python3 -m pytest --rootdir=. --confcutdir=. -q)`.
 
+## Event timeline
+
+Run `hermes wrapped timeline --output ./timeline.html` to render the last 24 hours. Select Hermes, Voice, or Both, then expand a lane for exact UTC times. Voice duration uses the recorded monotonic clock. Hermes duration is inferred from session boundaries, not time spent working. Missing boundaries stay unknown. `--hours` changes the window; `--db` and `--voice-dir` override the active profile and local voice trace directory.
+
+Add `--watch` to regenerate the file every 15 seconds while the command runs. Open it through a trusted local or private HTTP host for browser refresh. Pause refresh or open a lane to inspect it. The command opens no listener and never delivers the file to chat. The page includes activity timestamps, so do not publish it to a public host.
+
 ## How "upkeep" is decided
 
 A session counts as upkeep when it ran inside `~/.hermes`, its title is about Hermes itself (Hermes, gateway, plugins, profiles, providers, config, API keys, changing models), at least 40% of its steps touched Hermes (`~/.hermes`, `config.yaml`, `hermes config|model|auth|plugins|…`), or its title is about setup or fixing and at least 20% of its steps touched Hermes. The video shows the reason next to each upkeep session, so you can see exactly why it counted.
