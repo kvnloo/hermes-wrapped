@@ -161,6 +161,81 @@ export interface ReactionCounts {
 	flagged: number;
 }
 
+/** One evidence number. `usd` is an API-equivalent estimate; values are already rounded for display. */
+export interface InsightMetric {
+	key: string;
+	label: string;
+	value: number;
+	unit: "usd" | "pct" | "count" | "s" | "h";
+}
+
+export type Severity = "high" | "medium" | "low";
+
+export interface Finding {
+	id: string;
+	detector: string;
+	severity: Severity;
+	title: string;
+	evidence: InsightMetric[];
+	/** What to change; names a real Hermes or z0live setting where one exists. */
+	action: string;
+	/** Addressable API-equivalent cost, never a promised saving. Null when only counts are honest. */
+	impact: InsightMetric | null;
+	/** Dashboard hash route (`#/traces?range=7d&s=...`). */
+	link: string;
+}
+
+export interface InsightCheck {
+	detector: string;
+	label: string;
+	status: "fired" | "quiet" | "needs-data";
+	note: string;
+}
+
+/** Payload of `GET /api/stats/insights`: deterministic findings for one range. */
+export interface InsightsReport {
+	range: TimeRange;
+	window: { start: number | null; end: number; days: number | null };
+	historyDays: number;
+	totals: { requests: number; costUsd: number; unpricedRequests: number; sessions: number };
+	findings: Finding[];
+	checks: InsightCheck[];
+	notes: string[];
+}
+
+/** What the model received: keys, size and the payload itself. */
+export interface SentPayload {
+	keys: string[];
+	bytes: number;
+	payload: Record<string, unknown>;
+}
+
+interface LlmResultBase {
+	sent: SentPayload;
+	/** How the model is reached, e.g. "hermes auxiliary (wrapped_insights)". Null when none is configured. */
+	provider: string | null;
+	model?: string | null;
+	generatedAt?: number;
+	cached?: boolean;
+	reason?: string;
+	/** Figures, slots or findings that failed the grounding check. */
+	rejected?: string[];
+}
+
+/** `GET|POST /api/insights/narrative`. Only `verified` carries the model's text. */
+export type Narrative =
+	| (LlmResultBase & {
+			status: "verified";
+			summary: string;
+			actions: { finding: string; text: string }[];
+	  })
+	| (LlmResultBase & { status: "unverified" | "failed" | "unavailable" | "not_generated" });
+
+/** `POST /api/insights/ask`. */
+export type AskResult =
+	| (LlmResultBase & { status: "verified"; question: string; answer: string; findings: string[]; recorded: boolean })
+	| (LlmResultBase & { status: "unverified" | "failed" | "unavailable"; question: string });
+
 /** Payload of `GET /api/stats/frustration`: z0live `user.reaction` flags. */
 export interface VoiceFrustrationStats {
 	overall: ReactionCounts;

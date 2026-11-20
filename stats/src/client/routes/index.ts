@@ -2,6 +2,7 @@ export * from "./CallsRoute";
 export * from "./CostsRoute";
 export * from "./ErrorsRoute";
 export * from "./FrustrationRoute";
+export * from "./InsightsRoute";
 export * from "./ModelsRoute";
 export * from "./OverviewRoute";
 export * from "./ProjectsRoute";

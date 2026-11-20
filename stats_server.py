@@ -14,9 +14,9 @@ import tempfile
 import threading
 import time
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
-from . import stats_api, stats_hermes, stats_voice
+from . import stats_api, stats_hermes, stats_insights, stats_narrate, stats_voice
 
 DIST = Path(__file__).resolve().parent / "stats" / "dist"
 ASSETS = {
@@ -32,6 +32,8 @@ SNAPSHOT_TRACES = 25
 SNAPSHOT_ROWS = 2_000
 SNAPSHOT_SECTIONS = ("overview", "model-dashboard", "costs", "folders", "tools", "providers", "calls",
                      "frustration")
+NARRATE_RANGES = ("24h", "7d", "30d")
+MAX_BODY = 8 * 1024
 
 
 def default_voice_root() -> Path:
@@ -91,6 +93,19 @@ def _dumps(payload: Any) -> bytes:
     return json.dumps(payload, separators=(",", ":"), allow_nan=False).encode()
 
 
+def insights(models: Models, range_name: str, now_ms: int) -> tuple[dict, dict]:
+    """(report, LLM payload) for one range. Raises stats_api.BadRequest on an unknown range."""
+    w = stats_api.window(range_name, now_ms)
+    report = stats_insights.report(models.hermes, models.voice, w, range_name, now_ms)
+    return report, stats_insights.llm_payload(report, models.hermes, models.voice, w)
+
+
+def default_cache() -> stats_narrate.Cache:
+    from .store import data_dir
+
+    return stats_narrate.Cache(data_dir() / "insights-cache")
+
+
 class Handler(BaseHTTPRequestHandler):
     server: "StatsServer"  # pyright: ignore[reportIncompatibleVariableOverride]
     protocol_version = "HTTP/1.1"
@@ -129,8 +144,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, source.status())
         if url.path.startswith("/api/"):
             models = source.current()
+            now = int(time.time() * 1000)
             try:
-                payload = stats_api.route(url.path, url.query, models.hermes, models.voice, int(time.time() * 1000))
+                if url.path == "/api/stats/insights":
+                    payload: Any = insights(models, self._range(url.query), now)[0]
+                elif url.path == "/api/insights/narrative":
+                    report_payload = insights(models, self._range(url.query), now)[1]
+                    payload = stats_narrate.narrate(report_payload, self.server.llm, self.server.cache,
+                                                    cached_only=True)
+                else:
+                    payload = stats_api.route(url.path, url.query, models.hermes, models.voice, now)
             except stats_api.NotFound as exc:
                 return self._json(404, {"error": str(exc)})
             except stats_api.BadRequest as exc:
@@ -147,12 +170,50 @@ class Handler(BaseHTTPRequestHandler):
 
     do_HEAD = do_GET
 
+    @staticmethod
+    def _range(query: str) -> str:
+        return parse_qs(query).get("range", ["7d"])[0]
+
+    def _origin_ok(self) -> bool:
+        """A browser POST from another site carries its Origin; only this dashboard's own may spend tokens."""
+        origin = self.headers.get("Origin")
+        port = self.server.server_address[1]
+        return origin is None or origin in {f"http://{host}:{port}" for host in self.server.hosts}
+
     def do_POST(self) -> None:  # noqa: N802 - stdlib name
         if not self._host_ok():
             return self._json(421, {"error": "Unknown host."})
-        if urlsplit(self.path).path == "/api/sync":
+        url = urlsplit(self.path)
+        if url.path == "/api/sync":
             return self._json(200, self.server.source.status())
-        self._json(404, {"error": "Not found."})
+        if url.path not in ("/api/insights/narrative", "/api/insights/ask"):
+            return self._json(404, {"error": "Not found."})
+        # A cross-site form cannot send JSON without a CORS preflight, which this server never grants.
+        if not self._origin_ok():
+            return self._json(403, {"error": "Cross-origin request refused."})
+        if (self.headers.get("Content-Type") or "").split(";")[0].strip() != "application/json":
+            return self._json(415, {"error": "Send JSON."})
+        length = int(self.headers.get("Content-Length") or 0)
+        if not 0 <= length <= MAX_BODY:
+            return self._json(413, {"error": "Request too large."})
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            return self._json(400, {"error": "Body is not JSON."})
+        if not isinstance(body, dict):
+            return self._json(400, {"error": "Body must be a JSON object."})
+        range_name = body.get("range") if isinstance(body.get("range"), str) else self._range(url.query)
+        try:
+            payload = insights(self.server.source.current(), range_name, int(time.time() * 1000))[1]
+        except stats_api.BadRequest as exc:
+            return self._json(400, {"error": str(exc)})
+        server = self.server
+        if url.path == "/api/insights/narrative":
+            return self._json(200, stats_narrate.narrate(payload, server.llm, server.cache))
+        question = body.get("question")
+        if not isinstance(question, str):
+            return self._json(400, {"error": "question is required."})
+        self._json(200, stats_narrate.ask(payload, question, server.llm, server.cache))
 
     def _events(self) -> None:
         self.send_response(200)
@@ -173,9 +234,12 @@ class Handler(BaseHTTPRequestHandler):
 class StatsServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address: tuple[str, int], source: Source) -> None:
+    def __init__(self, address: tuple[str, int], source: Source, llm: stats_narrate.Llm | None = None,
+                 cache: stats_narrate.Cache | None = None) -> None:
         super().__init__(address, Handler)
         self.source = source
+        self.llm = llm  # None: the narrative and the ask box say no model is configured
+        self.cache = cache or stats_narrate.Cache(None)
         self.stopping = threading.Event()
         self.hosts = LOOPBACK
 
@@ -184,38 +248,51 @@ class StatsServer(ThreadingHTTPServer):
         super().server_close()
 
 
-def serve(source: Source, port: int = 8800) -> StatsServer:
-    return StatsServer(("127.0.0.1", port), source)
+def serve(source: Source, port: int = 8800, llm: stats_narrate.Llm | None = None,
+          cache: stats_narrate.Cache | None = None) -> StatsServer:
+    return StatsServer(("127.0.0.1", port), source, llm, cache)
 
 
 # ---------------------------------------------------------------- snapshot
 
-def snapshot_api(models: Models, now_ms: int) -> dict[str, Any]:
-    """Every payload the client asks for, keyed the way the client's snapshot shim looks them up."""
+def snapshot_api(models: Models, now_ms: int, llm: stats_narrate.Llm | None = None,
+                 cache: stats_narrate.Cache | None = None) -> dict[str, Any]:
+    """Every payload the client asks for, keyed the way the client's snapshot shim looks them up.
+    With an `llm`, the narrative for NARRATE_RANGES is generated (or read from `cache`) and inlined."""
     hermes, voice = models.hermes, models.voice
     api: dict[str, Any] = {}
 
     def put(key: str, path: str, query: str = "") -> None:
         api[key] = stats_api.route(path, query, hermes, voice, now_ms)
 
+    linked: list[str] = []
     for name in stats_api.RANGES:
         for section in SNAPSHOT_SECTIONS:
             path = f"/api/stats/{section}"
             put(f"{path}?range={name}", path, f"range={name}")
         put(f"/api/stats/errors?range={name}", "/api/stats/errors", f"range={name}&limit={SNAPSHOT_ROWS}")
+        report, payload = insights(models, name, now_ms)
+        api[f"/api/stats/insights?range={name}"] = report
+        linked += [parse_qs(f["link"].partition("?")[2]).get("s", [""])[0] for f in report["findings"]]
+        if llm is not None and name in NARRATE_RANGES:
+            api[f"/api/insights/narrative?range={name}"] = stats_narrate.narrate(
+                payload, llm, cache or stats_narrate.Cache(None))
     put("/api/stats/recent", "/api/stats/recent", f"limit={SNAPSHOT_ROWS}")
     put("/api/sessions", "/api/sessions", "limit=200")
-    for row in api["/api/sessions"][:SNAPSHOT_TRACES]:
-        put(f"/api/session/trace?file={row['file']}", "/api/session/trace", f"file={row['file']}")
+    # The newest traces, plus every trace a finding links to.
+    for key in dict.fromkeys([row["file"] for row in api["/api/sessions"][:SNAPSHOT_TRACES]] + linked):
+        if key:
+            put(f"/api/session/trace?file={key}", "/api/session/trace", f"file={key}")
     return api
 
 
-def build_snapshot(source: Source, now_ms: int | None = None) -> str:
+def build_snapshot(source: Source, now_ms: int | None = None, llm: stats_narrate.Llm | None = None,
+                   cache: stats_narrate.Cache | None = None) -> str:
     """One self-contained HTML file: client bundle, styles and pre-computed payloads inline."""
     now_ms = int(time.time() * 1000) if now_ms is None else now_ms
     models = source.current()
     payload = {"generatedAt": now_ms, "lastWriteAt": models.last_write_ms or None,
-               "api": snapshot_api(models, now_ms)}
+               "api": snapshot_api(models, now_ms, llm, cache)}
     # `</` cannot close the script element once escaped; JSON stays valid.
     data = json.dumps(payload, separators=(",", ":"), allow_nan=False).replace("</", "<\\/")
     script = (DIST / "index.js").read_text(encoding="utf-8").replace("</script", "<\\/script")
@@ -228,9 +305,10 @@ def build_snapshot(source: Source, now_ms: int | None = None) -> str:
                         f'<script type="module">{script}</script>')
 
 
-def publish_snapshot(source: Source, target: Path) -> Path:
+def publish_snapshot(source: Source, target: Path, llm: stats_narrate.Llm | None = None,
+                     cache: stats_narrate.Cache | None = None) -> Path:
     """Write atomically with owner-only permissions; a reader never sees half a page."""
-    html = build_snapshot(source)
+    html = build_snapshot(source, llm=llm, cache=cache)
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix=".stats-", suffix=".html", dir=target.parent)
     try:
@@ -246,10 +324,59 @@ def publish_snapshot(source: Source, target: Path) -> Path:
 
 # ---------------------------------------------------------------- CLI
 
+def add_llm_args(parser) -> None:
+    parser.add_argument("--llm-url", metavar="URL",
+                        help="OpenAI-compatible endpoint for summaries, e.g. http://127.0.0.1:8080/v1 (a llama-server). "
+                             "Default: your Hermes auxiliary model, auxiliary.wrapped_insights in config.yaml")
+    parser.add_argument("--llm-model", default="", help="Model name to send to --llm-url")
+    parser.add_argument("--llm-key-env", default="", metavar="VAR", help="Env var holding a key for --llm-url")
+
+
+def llm_from_args(args) -> stats_narrate.Llm | None:
+    return stats_narrate.pick_llm(args.llm_url, args.llm_model, args.llm_key_env)
+
+
 def setup_cli(parser) -> None:
     parser.add_argument("--port", type=int, default=8800, help="Port to serve on at 127.0.0.1 (default 8800)")
     parser.add_argument("--snapshot", metavar="PATH", help="Write a static snapshot to PATH instead of serving")
+    parser.add_argument("--narrate", action="store_true",
+                        help="With --snapshot: write the summaries for 24h, 7d and 30d into it (sends only the "
+                             "aggregates and findings to the model)")
     parser.add_argument("--voice-traces", metavar="DIR", help="z0live voice-trace directory")
+    add_llm_args(parser)
+
+
+def insights_text(hermes_home: Path, range_name: str = "7d", llm: stats_narrate.Llm | None = None,
+                  narrate: bool = False, voice_root: Path | None = None, as_json: bool = False) -> str:
+    """`/wrapped insights` and `hermes wrapped insights`. Without `narrate` no model is called: a summary
+    shows only when one for this exact input is already cached."""
+    source = Source(stats_hermes.root_of(hermes_home), voice_root or default_voice_root())
+    report, payload = insights(source.current(), range_name, int(time.time() * 1000))
+    narrative = stats_narrate.narrate(payload, llm, default_cache(), cached_only=not narrate) if llm else None
+    if as_json:
+        return json.dumps({"report": report, "narrative": narrative}, indent=2)
+    return stats_insights.as_text(report, narrative)
+
+
+def setup_insights_cli(parser) -> None:
+    parser.add_argument("--range", default="7d", choices=list(stats_api.RANGES), help="Window (default 7d)")
+    parser.add_argument("--narrate", action="store_true",
+                        help="Also write a summary with a model (sends only the aggregates and findings)")
+    parser.add_argument("--json", action="store_true", help="Print the findings, checks and summary as JSON")
+    parser.add_argument("--voice-traces", metavar="DIR", help="z0live voice-trace directory")
+    add_llm_args(parser)
+
+
+def run_insights_cli(args, hermes_home: Path) -> int:
+    import sys
+
+    llm = llm_from_args(args)
+    if args.narrate and llm is None:
+        print("--narrate needs a model: run inside Hermes or pass --llm-url.", file=sys.stderr)
+        return 1
+    voice = Path(args.voice_traces).expanduser() if args.voice_traces else None
+    print(insights_text(hermes_home, args.range, llm, args.narrate, voice, args.json))
+    return 0
 
 
 def run_cli(args, hermes_home: Path) -> int:
@@ -257,15 +384,21 @@ def run_cli(args, hermes_home: Path) -> int:
 
     voice = Path(args.voice_traces).expanduser() if args.voice_traces else default_voice_root()
     source = Source(stats_hermes.root_of(hermes_home), voice)
+    llm = llm_from_args(args)
     if args.snapshot:
-        print(publish_snapshot(source, Path(args.snapshot).expanduser()))
+        if args.narrate and llm is None:
+            print("--narrate needs a model: run inside Hermes or pass --llm-url.", file=sys.stderr)
+            return 1
+        print(publish_snapshot(source, Path(args.snapshot).expanduser(), llm if args.narrate else None,
+                               default_cache()))
         return 0
     try:
-        server = serve(source, args.port)
+        server = serve(source, args.port, llm, default_cache())
     except OSError as exc:
         print(f"Could not listen on 127.0.0.1:{args.port}: {exc.strerror or exc}", file=sys.stderr)
         return 1
     print(f"Hermes stats on http://127.0.0.1:{args.port}/  (Ctrl-C to stop)", flush=True)
+    print(f"Summaries: {llm.identity if llm else 'off (no model; run inside Hermes or pass --llm-url)'}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

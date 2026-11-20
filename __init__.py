@@ -341,8 +341,31 @@ def _local_wrapped(ctx, render, hit: Path | None, *, mode: str, days: int, theme
     return f"🎬 Rendering {what}. It takes a few minutes{slow}; the video will play right here when it's done."
 
 
+INSIGHT_RANGES = {"day": "24h", "today": "24h", "week": "7d", "month": "30d", "quarter": "90d", "all": "all"}
+
+
+def _insights_command(words: list[str]) -> str:
+    """`/wrapped insights [24h|7d|30d|90d|all|week|month]`: findings as text, at once, with no model call.
+    A summary appears only when one was already generated for this exact data (dashboard or CLI)."""
+    from .stats_api import RANGES
+    from .stats_narrate import hermes_llm
+    from .stats_server import insights_text
+
+    word = (words[0].lower() if words else "7d")
+    range_name = INSIGHT_RANGES.get(word, word)
+    if range_name not in RANGES:
+        return f"Unknown range {word!r}. Try /wrapped insights 24h, 7d, 30d, 90d or all."
+    try:
+        return insights_text(store.hermes_home(), range_name, hermes_llm())
+    except Exception as exc:  # a slash command must answer, never raise into the chat
+        log.warning("hermes-wrapped: insights failed", exc_info=True)
+        return f"Insights couldn't be computed: {exc}"
+
+
 def _wrapped_command(ctx):
     def handler(raw_args: str, *, session_id: str = "", platform: str = "", source: Any = None, session_key: str = "", **_: Any) -> str:
+        if (raw_args or "").split()[:1] == ["insights"]:
+            return _insights_command((raw_args or "").split()[1:])
         theme, words = _split_theme((raw_args or "").split())
         mode, days, sid, fmt = _parse(words)
         if mode == "session" and not sid:
@@ -482,9 +505,10 @@ def _cli_setup(sub) -> None:
     s.add_argument("--deliver", default="telegram", help="Delivery target (default: telegram home channel)")
     s.add_argument("--when", default="0 18 * * 0", help="Cron schedule (default: Sundays 18:00)")
     sp.add_parser("list", help="Recent sessions")
-    from .stats_server import setup_cli as setup_stats
+    from .stats_server import setup_cli as setup_stats, setup_insights_cli
 
     setup_stats(sp.add_parser("stats", help="Usage dashboard on 127.0.0.1 (or --snapshot PATH for a static page)"))
+    setup_insights_cli(sp.add_parser("insights", help="What to change: findings from your usage, with actions"))
     sp.add_parser("doctor", help="Check Node, npx and ffmpeg")
     sub.set_defaults(func=_cli)
 
@@ -495,6 +519,10 @@ def _cli(args) -> int:
         from .stats_server import run_cli as run_stats
 
         return run_stats(args, store.hermes_home())
+    if cmd == "insights":
+        from .stats_server import run_insights_cli
+
+        return run_insights_cli(args, store.hermes_home())
     if cmd == "doctor":
         ok, why = _render.hyperframes_available()
         print("ready" if ok else f"not ready: {why}")
@@ -559,7 +587,7 @@ def register(ctx) -> None:
         "wrapped",
         _wrapped_command(ctx),
         description="Your week with Hermes as a video: what it did, what it cost, how much was upkeep",
-        args_hint="[week | month | year | session [id]] [vertical | landscape] [crt | blue]",
+        args_hint="[week | month | year | session [id] | insights [7d]] [vertical | landscape] [crt | blue]",
     )
     ctx.register_tool(
         name="wrapped_make",

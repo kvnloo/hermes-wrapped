@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _load import load  # noqa: E402
 
 load()
-from hermes_wrapped import stats_api, stats_hermes, stats_server, stats_voice  # noqa: E402
+from hermes_wrapped import stats_api, stats_hermes, stats_insights, stats_narrate, stats_server, stats_voice  # noqa: E402
 
 SECRET = "SECRET-PROMPT-TEXT"
 NOW = int(time.time())
@@ -251,8 +251,20 @@ class StatsAdapterTest(unittest.TestCase):
                         payloads.append(self.get("/api/session/entry", f"file={track['file']}&id={span['entryId']}"))
         for row in self.get("/api/stats/recent", "limit=50"):  # every row the request drawer can open
             payloads.append(self.get(f"/api/request/{row['id']}"))
+        # Insights, the LLM payload, and the exact messages a model would receive.
+        sent = []
+        llm = stats_narrate.Llm("capture", lambda messages: (sent.append(messages), ('{"summary": "ok", '
+                                                                                     '"actions": []}', "m"))[1])
+        for name in stats_api.RANGES:
+            w = stats_api.window(name, NOW * 1000)
+            report = stats_insights.report(self.data, self.voice, w, name, NOW * 1000)
+            payload = stats_insights.llm_payload(report, self.data, self.voice, w)
+            payloads += [report, payload, stats_narrate.narrate(payload, llm, stats_narrate.Cache(None)),
+                         stats_narrate.ask(payload, "where did it go?", llm, stats_narrate.Cache(None))]
+        payloads.append(sent)
         text = json.dumps(payloads)
         self.assertGreater(len(payloads), 20)
+        self.assertEqual(len(sent), 2 * len(stats_api.RANGES))
         self.assertNotIn(SECRET, text)
         self.assertNotIn("/work/alpha", text)  # folders are basenames only
 

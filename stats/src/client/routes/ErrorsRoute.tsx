@@ -1,6 +1,7 @@
 import { ArrowUpRight, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getRecentErrors } from "../api";
+import { Explain } from "../insights/Summary";
 import { BarList } from "../charts";
 import { modelKey } from "../data/colors";
 import {
@@ -162,6 +163,7 @@ export function ErrorsRoute({ active, range, onRequestClick }: ErrorsRouteProps)
 					index={1}
 					title="Error signatures"
 					description="Same message with ids and counters normalized. Select one to filter the failures below."
+					actions={<Explain section="errors" range={range} />}
 					flush
 					stale={errors.stale}
 				>

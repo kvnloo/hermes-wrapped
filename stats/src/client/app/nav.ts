@@ -6,6 +6,7 @@ import {
 	FolderGit2,
 	Frown,
 	LayoutGrid,
+	Lightbulb,
 	type LucideIcon,
 	Phone,
 	PlugZap,
@@ -24,7 +25,8 @@ export type DashboardSection =
 	| "calls"
 	| "tools"
 	| "frustration"
-	| "projects";
+	| "projects"
+	| "insights";
 
 export interface NavItem {
 	id: DashboardSection;
@@ -62,6 +64,7 @@ export const NAV: readonly NavGroup[] = [
 	{
 		heading: "Insights",
 		items: [
+			{ id: "insights", label: "What to change", icon: Lightbulb, hotkey: "i" },
 			{ id: "tools", label: "Tools", icon: Wrench, hotkey: "l" },
 			{ id: "frustration", label: "Frustration", icon: Frown, hotkey: "f" },
 			{ id: "projects", label: "Projects", icon: FolderGit2, hotkey: "j" },

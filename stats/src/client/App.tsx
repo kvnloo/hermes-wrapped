@@ -8,6 +8,7 @@ import {
 	CostsRoute,
 	ErrorsRoute,
 	FrustrationRoute,
+	InsightsRoute,
 	ModelsRoute,
 	OverviewRoute,
 	ProjectsRoute,
@@ -62,6 +63,8 @@ function Dashboard() {
 				return <ProjectsRoute active={active} range={range} />;
 			case "calls":
 				return <CallsRoute active={active} range={range} />;
+			case "insights":
+				return <InsightsRoute active={active} range={range} />;
 		}
 	};
 

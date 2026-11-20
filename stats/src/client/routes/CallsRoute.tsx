@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { getCallsDashboardStats } from "../api";
+import { Explain } from "../insights/Summary";
 import { Legend, TimeChart, useHiddenSeries } from "../charts";
 import { SERIES_COLORS } from "../data/colors";
 import { formatElapsed, formatInteger, formatPercent, formatRelativeTime } from "../data/formatters";
@@ -160,7 +161,13 @@ export function CallsRoute({ active, range }: CallsRouteProps) {
 					</QueryView>
 				</Card>
 
-				<Card index={2} title="Lanes" description="Fast, medium and slow tiers racing each hand-off" stale={query.stale}>
+				<Card
+					index={2}
+					title="Lanes"
+					description="Fast, medium and slow tiers racing each hand-off"
+					actions={<Explain section="calls" range={range} />}
+					stale={query.stale}
+				>
 					<QueryView query={query} skeleton={<ChartSkeleton height={260} />}>
 						{({ lanes }) => <LaneSummary lanes={lanes} />}
 					</QueryView>

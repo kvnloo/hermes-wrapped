@@ -1,6 +1,7 @@
 import "./costs.css";
 import { useMemo } from "react";
 import { getCostDashboardStats } from "../api";
+import { Explain } from "../insights/Summary";
 import { Chart, type ChartSeries, Legend, ShareBar, useHiddenSeries } from "../charts";
 import { buildModelColorLookup, modelKey, OTHER_COLOR, SERIES_COLORS } from "../data/colors";
 import { formatCost, formatEstimatedCost, formatInteger, formatPercent } from "../data/formatters";
@@ -77,6 +78,7 @@ export function CostsRoute({ active, range }: CostsRouteProps) {
 					index={1}
 					title="Daily estimate"
 					description="Per day, stacked by model"
+					actions={<Explain section="costs" range={range} />}
 					stale={query.stale}
 				>
 					<QueryView query={query} skeleton={<ChartSkeleton height={280} />} isEmpty={isEmpty} empty={empty}>

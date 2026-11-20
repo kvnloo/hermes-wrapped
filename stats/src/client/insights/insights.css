@@ -1,0 +1,260 @@
+/* Insights: findings, the written summary, checks and the Explain popover. */
+
+.insight-summary-text {
+	font-size: 14.5px;
+	line-height: 1.55;
+	color: var(--ink-1);
+	max-width: 78ch;
+}
+
+.insight-actions {
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	counter-reset: action;
+}
+
+.insight-actions li {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding-left: 28px;
+	position: relative;
+	min-width: 0;
+	counter-increment: action;
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.insight-actions li::before {
+	content: counter(action);
+	position: absolute;
+	left: 0;
+	top: 1px;
+	width: 18px;
+	height: 18px;
+	border-radius: var(--r-pill);
+	display: grid;
+	place-items: center;
+	font: 600 11px/1 var(--font-mono);
+	color: var(--ink-inverse);
+	background: var(--accent-gradient);
+}
+
+.insight-action-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-width: 0;
+}
+
+.insight-action-impact {
+	flex-shrink: 0;
+	color: var(--ink-2);
+}
+
+.insight-action-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	font-weight: 550;
+	color: var(--ink-1);
+	text-align: left;
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+	font-size: 13.5px;
+}
+
+.insight-action-title:hover {
+	color: var(--accent);
+}
+
+.insight-sent {
+	border-top: 1px solid var(--line-1);
+	padding-top: 10px;
+}
+
+/* Findings list */
+.insight-list {
+	list-style: none;
+}
+
+.insight-row {
+	display: grid;
+	gap: 10px;
+	padding: 14px 16px 16px;
+	border-top: 1px solid var(--line-1);
+	scroll-margin-top: calc(var(--topbar-h) + 12px);
+}
+
+.insight-row-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.insight-row-title {
+	font-size: 14px;
+	font-weight: 560;
+	letter-spacing: -0.005em;
+	flex: 1;
+	min-width: 0;
+}
+
+.insight-impact {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 0;
+	flex-shrink: 0;
+}
+
+.insight-impact .num {
+	font-size: 15px;
+	font-weight: 600;
+	background: var(--accent-gradient);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+.insight-evidence {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 6px 18px;
+}
+
+.insight-evidence div {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.insight-evidence dt {
+	font-size: 11.5px;
+	color: var(--ink-3);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.insight-evidence dd {
+	color: var(--ink-1);
+}
+
+.insight-do {
+	display: flex;
+	gap: 10px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--ink-2);
+	max-width: 100ch;
+}
+
+.insight-do-label {
+	flex-shrink: 0;
+	font: 600 10.5px/1.9 var(--font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--accent);
+}
+
+.insight-link {
+	justify-self: start;
+	margin-left: -8px;
+}
+
+/* Checks */
+.insight-checks {
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.insight-check {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	font-size: 13px;
+}
+
+.insight-check svg {
+	margin-top: 2px;
+	flex-shrink: 0;
+	color: var(--ink-3);
+}
+
+.insight-check[data-status="fired"] svg {
+	color: var(--accent);
+}
+
+.insight-check[data-status="quiet"] svg {
+	color: var(--ok);
+}
+
+.insight-answer {
+	border-top: 1px solid var(--line-1);
+	padding-top: 10px;
+	font-size: 13.5px;
+	line-height: 1.55;
+}
+
+/* Explain popover on chart cards */
+.explain {
+	position: relative;
+}
+
+.explain-pop {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	z-index: 30;
+	width: min(380px, 80vw);
+	padding: 12px;
+	border-radius: var(--r-card);
+	border: 1px solid var(--line-2);
+	background: var(--raised);
+	box-shadow: var(--shadow-3);
+}
+
+.explain-item {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px;
+	margin: -4px -8px;
+	border-radius: var(--r-control);
+	color: inherit;
+}
+
+.explain-item:hover {
+	background: var(--hover);
+}
+
+.explain-title {
+	font-size: 13px;
+	font-weight: 550;
+}
+
+.explain-check {
+	font-size: 12.5px;
+	font-weight: 550;
+}
+
+@media (max-width: 720px) {
+	.insight-row-head {
+		flex-wrap: wrap;
+	}
+
+	.insight-impact {
+		align-items: flex-start;
+	}
+}

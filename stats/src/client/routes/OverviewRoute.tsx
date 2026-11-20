@@ -1,6 +1,7 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Lightbulb } from "lucide-react";
 import { useMemo, useState } from "react";
-import { getOverviewStats, getRecentRequests } from "../api";
+import { getInsights, getOverviewStats, getRecentRequests } from "../api";
+import { Explain, Summary } from "../insights/Summary";
 import { Legend, ShareBar, TimeChart } from "../charts";
 import { OTHER_COLOR } from "../data/colors";
 import {
@@ -74,6 +75,7 @@ const TOKEN_MIX = [
 export function OverviewRoute({ active, range, onRequestClick }: OverviewRouteProps) {
 	const overview = useQuery(["overview", range], ({ signal }) => getOverviewStats(range, signal), { enabled: active });
 	const recent = useQuery(["recent-requests"], ({ signal }) => getRecentRequests(12, signal), { enabled: active });
+	const insights = useQuery(["insights", range], ({ signal }) => getInsights(range, signal), { enabled: active });
 	const [metric, setMetric] = useState<ActivityMetric>("requests");
 	const meta = rangeMeta(range);
 
@@ -118,6 +120,28 @@ export function OverviewRoute({ active, range, onRequestClick }: OverviewRoutePr
 				title="Overview"
 				description={`Everything Hermes did across ${overview.data ? `${overview.data.profiles.length} profiles` : "your profiles"} in ${meta.windowLabel}.`}
 			/>
+
+			<QueryView query={insights} skeleton={<ChartSkeleton height={96} />}>
+				{report => (
+					<Card
+						index={0}
+						title={
+							<>
+								<Lightbulb size={15} /> What to change
+							</>
+						}
+						description={`${report.findings.length} finding${report.findings.length === 1 ? "" : "s"} in ${meta.windowLabel}`}
+						actions={
+							<a className="btn" data-size="sm" data-variant="ghost" href={`#/insights?range=${range}`}>
+								All findings <ArrowRight size={13} />
+							</a>
+						}
+						stale={insights.stale}
+					>
+						<Summary range={range} report={report} compact />
+					</Card>
+				)}
+			</QueryView>
 
 			<QueryView query={overview} skeleton={<ChartSkeleton height={112} />}>
 				{({ overall }) => (
@@ -196,7 +220,12 @@ export function OverviewRoute({ active, range, onRequestClick }: OverviewRoutePr
 					index={1}
 					title="Activity"
 					description={`Per ${meta.bucketMs < 3_600_000 ? "5 minutes" : meta.bucketMs < 86_400_000 ? "hour" : "day"}`}
-					actions={<Segmented size="sm" options={ACTIVITY_OPTIONS} value={metric} onChange={setMetric} />}
+					actions={
+						<>
+							<Explain section="overview" range={range} />
+							<Segmented size="sm" options={ACTIVITY_OPTIONS} value={metric} onChange={setMetric} />
+						</>
+					}
 					stale={overview.stale}
 				>
 					<QueryView query={overview} skeleton={<ChartSkeleton height={260} />}>

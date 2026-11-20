@@ -41,6 +41,7 @@ Scenes with nothing interesting to say are skipped, so a quiet week makes a shor
 | `/wrapped blue` | navy and cobalt theme with film grain (`crt` for amber) |
 | `/wrapped month vertical blue` | any combination; words can go in any order |
 | `/wrapped session [id]` | one session as a short video (latest if no id) |
+| `/wrapped insights [7d]` | what to change, as text, with no model call (also `24h`, `30d`, `90d`, `all`) |
 
 **Choosing a theme:** say `crt` or `blue` in the command for that video, or set `theme` in `config.yaml` to change your default.
 
@@ -68,6 +69,7 @@ In any chat:
 /wrapped year landscape   # or 16:9, whatever your default is
 /wrapped blue             # the navy and cobalt look (or `crt`, the default)
 /wrapped session [id]     # one session as a short video
+/wrapped insights         # what to change this week, as text
 ```
 
 Or ask: "show me my week with you". The agent calls `wrapped_make` and sends the video.
@@ -79,6 +81,7 @@ hermes wrapped week [--vertical] [--send telegram]
 hermes wrapped month
 hermes wrapped year --vertical --theme blue
 hermes wrapped session <id>
+hermes wrapped insights --range 7d [--narrate] [--json]
 hermes wrapped schedule --deliver telegram --when "0 18 * * 0"
 hermes wrapped list
 ```
@@ -91,7 +94,7 @@ Run `hermes wrapped stats` (or `bin/hermes-wrapped stats` from a checkout) and o
 
 - Usage: Overview, Models, Providers and Costs, across every Hermes profile (`~/.hermes/state.db` and `~/.hermes/profiles/*/state.db`).
 - Activity: Requests, Errors and Traces, plus Calls for z0live voice calls (turn gap, hand-off latency p50/p90, lane timings).
-- Insights: Tools, Frustration (from z0live's per-turn `user.reaction` flags) and Projects.
+- Insights: What to change (see below), Tools, Frustration (from z0live's per-turn `user.reaction` flags) and Projects.
 
 The dashboard reads metadata only: ids, timestamps, model and provider names, token counts, costs, tool names, error kinds and counts. It never selects message content, titles, prompts, tool arguments or transcripts, and it opens every store read-only. The server binds 127.0.0.1 and answers only to loopback Host headers.
 
@@ -103,6 +106,27 @@ What Hermes does not record stays unknown rather than zero:
 - Omp's Gain and Spotlight pages and its subscription-window panels are dropped: Hermes has no data for them. Frustration does not judge typed chats, because that would mean reading message text.
 
 `hermes wrapped stats --snapshot PATH` writes one self-contained HTML file with every page's data inline and no server. The snapshot shows when it was built and does not refresh.
+
+### What to change
+
+The **What to change** page (key `i`) turns a window into findings. A finding names a measured cause, its evidence numbers, the Hermes setting to change, the API-equivalent cost it touches, and a link to the page that shows it. Five detectors run:
+
+- Side tasks on the main model: compaction, approvals, background review and titles. The action names `auxiliary.<task>.provider` and `.model`.
+- Subagents that inherit the main model. The action names `delegation.model` and `delegation.provider`.
+- Big sessions with a measured cause: many subagents, repeated compactions, or a context much heavier than your typical session's. A session that is big only because it did a lot of work is not a finding.
+- Failed turns per model and provider.
+- z0live lanes in which one model rarely answers. This detector runs only for voice users.
+
+Each detector also reports a check: found, fine, or waiting for more data. Dollar figures are API-equivalent estimates. On a subscription they are not money you spent or will save. Requests with no price are left out of every dollar figure, and a note says how many there are.
+
+A model can write a short summary with three actions, and answer questions on the live page. It gets the findings and totals only: counts, costs, timings, and model, provider and profile names. It never gets messages, prompts, titles, tool arguments, folder names or session ids. The page shows exactly what was sent. Every number in a reply must match a number the model was given. If one does not, the reply is hidden and marked unverified, and the findings stand alone. Replies are cached by their input.
+
+- The model is your Hermes auxiliary model. Set `auxiliary.wrapped_insights` in `config.yaml` as you would for any auxiliary task. If it is unset, Hermes picks one.
+- To use a local OpenAI-compatible server instead, such as llama-server, pass `--llm-url http://127.0.0.1:8080/v1`.
+- `hermes wrapped insights` and `/wrapped insights` print the findings with no model call. They add a summary only if one is already cached. `hermes wrapped insights --narrate` writes one.
+- `hermes wrapped stats --snapshot PATH --narrate` writes summaries into the snapshot. A snapshot cannot answer questions.
+
+From a checkout, summaries need Hermes's runtime. Run `HERMES_AGENT=~/.hermes/hermes-agent <Hermes's python> bin/hermes-wrapped ...`, or pass `--llm-url`. [docs/ADVISOR-INSIGHTS.md](docs/ADVISOR-INSIGHTS.md) records the review behind these detectors and guards.
 
 The client lives in `stats/`. Rebuild it after changing it with `(cd stats && bun install && bun run check && bun run build)`. The built `stats/dist` is committed so the plugin needs no JavaScript toolchain.
 
@@ -139,11 +163,11 @@ Times use the plugin's `timezone` setting, then Hermes's own (`timezone` in `con
 
 ## Disclosures
 
-- **Reads outside plugin data:** your session history (`state.db`), read-only, through `hermes_state.SessionDB` and a read-only SQLite connection. Nothing leaves your machine unless you deliver a video.
+- **Reads outside plugin data:** your session history (`state.db`), read-only, through `hermes_state.SessionDB` and a read-only SQLite connection. Nothing leaves your machine unless you deliver a video or ask a remote model for an insights summary. That summary gets aggregates only, as listed under What to change.
 - **Shell commands / subprocesses:** `npx --yes hyperframes@0.8.217 render` (pinned) to render, `hermes send` to deliver. `hermes wrapped schedule` runs `hermes cron create`.
-- **Third-party network calls:** the first render downloads the HyperFrames CLI from npm (`hyperframes@0.8.217` is pinned; its own dependencies are resolved by npm) and a headless Chrome build chosen by HyperFrames. The fonts (Silkscreen, VT323, Pathway Gothic One, Instrument Serif and IBM Plex Mono, all SIL Open Font License) ship in `assets/fonts`, so nothing is fetched for type. No model or TTS calls. No telemetry.
-- **Writes:** tool-timing events to `~/.hermes/plugin-data/hermes-wrapped/events.db` (kept 30 days), a temporary render folder under the same directory (deleted after each render), MP4s to `~/.hermes/cache/videos/`, and, only if you run `hermes wrapped schedule`, one script at `~/.hermes/scripts/hermes-wrapped-weekly.sh`.
-- **Background work:** `/wrapped` answers at once and renders in a background thread, so the chat is never blocked (Desktop slash commands time out after about 30 seconds). In messaging apps the video is sent with `hermes send` when it is done. In the Desktop app, TUI and CLI a slash command can only print text, so when the video is ready the plugin hands it to the same chat with `inject_message`, and the agent's one-line reply plays it. That reply is the only model call Wrapped ever causes, and it needs `allow_gateway_injection: true` under `plugins.entries.hermes-wrapped` in config.yaml. A video already rendered today is reused, and a cross-process file lock (`render.lock`) means only one render runs at a time, however many sessions ask.
+- **Third-party network calls:** the first render downloads the HyperFrames CLI from npm (`hyperframes@0.8.217` is pinned; its own dependencies are resolved by npm) and a headless Chrome build chosen by HyperFrames. The fonts (Silkscreen, VT323, Pathway Gothic One, Instrument Serif and IBM Plex Mono, all SIL Open Font License) ship in `assets/fonts`, so nothing is fetched for type. No TTS calls. A model call happens only when you ask for an insights summary or answer: the **Write a summary** button, the **Ask** box, `--narrate`, and the video reply below. No telemetry.
+- **Writes:** tool-timing events to `~/.hermes/plugin-data/hermes-wrapped/events.db` (kept 30 days), cached insights replies to `~/.hermes/plugin-data/hermes-wrapped/insights-cache/`, a temporary render folder under the same directory (deleted after each render), MP4s to `~/.hermes/cache/videos/`, and, only if you run `hermes wrapped schedule`, one script at `~/.hermes/scripts/hermes-wrapped-weekly.sh`.
+- **Background work:** `/wrapped` answers at once and renders in a background thread, so the chat is never blocked (Desktop slash commands time out after about 30 seconds). In messaging apps the video is sent with `hermes send` when it is done. In the Desktop app, TUI and CLI a slash command can only print text, so when the video is ready the plugin hands it to the same chat with `inject_message`, and the agent's one-line reply plays it. Apart from the insights summaries you ask for, that reply is the only model call Wrapped causes. It needs `allow_gateway_injection: true` under `plugins.entries.hermes-wrapped` in config.yaml. A video already rendered today is reused, and a cross-process file lock (`render.lock`) means only one render runs at a time, however many sessions ask.
 - **Credentials:** none.
 - **Privacy on screen:** in the weekly video, the biggest project's name is shown only after secrets, paths, IPs, logins and domains are removed (turn it off with `show_titles: false`), and your messages are never shown unless `quotes` is on. `/wrapped session` is different: it shows that session's first request, its step labels and the final answer, with secrets and home paths stripped.
 

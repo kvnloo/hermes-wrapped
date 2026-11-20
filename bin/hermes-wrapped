@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
-"""Run the Hermes Wrapped CLI from a checkout, e.g. `bin/hermes-wrapped stats --port 8800`."""
+"""Run the Hermes Wrapped CLI from a checkout, e.g. `bin/hermes-wrapped stats --port 8800`.
+
+Summaries use your Hermes auxiliary model when Hermes's runtime is importable. From a checkout, set
+HERMES_AGENT to the hermes-agent directory and run this with Hermes's Python, or pass --llm-url.
+"""
 import argparse
 import importlib.util
+import os
 import pathlib
 import sys
+
+if os.environ.get("HERMES_AGENT"):
+    sys.path.insert(0, os.environ["HERMES_AGENT"])
+    import hermes_bootstrap  # noqa: F401  # Hermes's own dependency path, as the `hermes` launcher sets it up
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 spec = importlib.util.spec_from_file_location(

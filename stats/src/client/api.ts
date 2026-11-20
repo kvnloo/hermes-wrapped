@@ -1,9 +1,12 @@
 import { fromSnapshot, SNAPSHOT } from "./snapshot";
 import type {
+	AskResult,
 	CallsDashboardStats,
 	CostDashboardStats,
 	FolderStats,
+	InsightsReport,
 	LiveStatus,
+	Narrative,
 	MessageStats,
 	ModelDashboardStats,
 	OverviewStats,
@@ -141,6 +144,45 @@ export async function getCallsDashboardStats(
 	signal?: AbortSignal,
 ): Promise<CallsDashboardStats> {
 	return fetchJson<CallsDashboardStats>(`${API_BASE}/stats/calls?range=${encodeURIComponent(range)}`, { signal });
+}
+
+/** Deterministic findings for one range. */
+export async function getInsights(range: TimeRange = "7d", signal?: AbortSignal): Promise<InsightsReport> {
+	return fetchJson<InsightsReport>(`${API_BASE}/stats/insights?range=${encodeURIComponent(range)}`, { signal });
+}
+
+/** The cached summary for one range. A snapshot without one answers `not_generated`. */
+export async function getNarrative(range: TimeRange = "7d", signal?: AbortSignal): Promise<Narrative> {
+	try {
+		return await fetchJson<Narrative>(`${API_BASE}/insights/narrative?range=${encodeURIComponent(range)}`, {
+			signal,
+		});
+	} catch (err) {
+		if (SNAPSHOT && err instanceof ApiError && err.status === 404) {
+			return { status: "not_generated", provider: null, sent: { keys: [], bytes: 0, payload: {} } };
+		}
+		throw err;
+	}
+}
+
+/** Live server only: send the aggregates and findings to the configured model. */
+async function postJson<T>(endpoint: string, body: unknown): Promise<T> {
+	if (SNAPSHOT) throw new ApiError(405, endpoint, "This snapshot is read-only. Run `hermes wrapped stats` to ask.");
+	const res = await fetch(endpoint, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
+	if (!res.ok) throw new ApiError(res.status, endpoint, await readErrorMessage(res, endpoint));
+	return (await res.json()) as T;
+}
+
+export function generateNarrative(range: TimeRange): Promise<Narrative> {
+	return postJson<Narrative>(`${API_BASE}/insights/narrative`, { range });
+}
+
+export function askInsights(range: TimeRange, question: string): Promise<AskResult> {
+	return postJson<AskResult>(`${API_BASE}/insights/ask`, { range, question });
 }
 
 export async function getFolderStats(range: TimeRange = "24h", signal?: AbortSignal): Promise<FolderStats[]> {
