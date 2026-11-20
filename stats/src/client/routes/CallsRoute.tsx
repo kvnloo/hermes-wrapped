@@ -170,7 +170,7 @@ export function CallsRoute({ active, range }: CallsRouteProps) {
 			<Card
 				index={3}
 				title="Lane timings"
-				description="Per tier: first token and finish after the hand-off started, who won and who failed"
+				description="Per tier: first token and finish after the hand-off started, who answered, who declined (SKIP) and who failed"
 				flush
 				stale={query.stale}
 			>
@@ -280,6 +280,7 @@ const LANE_COLUMNS: Column<VoiceLaneStats>[] = [
 	{ key: "fin50", header: "Finish p50", align: "right", render: row => <span className="num">{seconds(row.finish.p50)}</span> },
 	{ key: "fin90", header: "p90", align: "right", render: row => <span className="num muted">{seconds(row.finish.p90)}</span> },
 	{ key: "wins", header: "Answered by", wrap: true, render: row => <span className="mono micro">{models(row.wins)}</span> },
+	{ key: "skips", header: "Skipped", wrap: true, render: row => <span className="mono micro dim">{models(row.skips)}</span> },
 	{ key: "fails", header: "Errors", wrap: true, render: row => <span className="mono micro dim">{models(row.failures)}</span> },
 ];
 

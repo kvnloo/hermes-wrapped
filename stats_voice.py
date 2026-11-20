@@ -40,7 +40,8 @@ class Lane:
     model: str | None  # the model that answered; None when every model failed
     first_s: float | None  # first token, from the tier's start
     s: float  # tier finished, since the delegation's lanes began
-    failed: tuple[str, ...]  # models that errored
+    failed: tuple[str, ...]  # models that errored (timeouts, exceptions)
+    skipped: tuple[str, ...]  # models that declined on purpose (SKIP) or returned nothing
     spoken: str | None  # "first" | "update" | None
 
 
@@ -209,11 +210,14 @@ def _call(path: Path, rows: list[dict], now: float) -> VoiceCall | None:
         for r in tiers.get(did, []):
             tier = _name(r.get("tier")) or "unknown"
             errors = r.get("errors")
-            failed = tuple(sorted(k for k in errors if _name(k))) if isinstance(errors, dict) else ()
+            errors = errors if isinstance(errors, dict) else {}
+            declined = {k for k, v in errors.items() if v in ("SKIP", "empty")}
+            failed = tuple(sorted(k for k in errors if _name(k) and k not in declined))
+            skipped = tuple(sorted(k for k in declined if _name(k)))
             s = _num(r.get("s"))
             if s is None:
                 continue
-            lanes.append(Lane(tier, _name(r.get("model")), _num(r.get("first_s")), s, failed,
+            lanes.append(Lane(tier, _name(r.get("model")), _num(r.get("first_s")), s, failed, skipped,
                               spoken.get((did, tier))))
         finish = done.get(did)
         first = first_spoken.get(did)

@@ -111,7 +111,7 @@ def _voice(root):
                  text=SECRET),
               ev(4.0, "delegation.start", did="d1", request=SECRET),
               ev(5.0, "lanes.tier", did="d1", tier="fast", model="m-fast", first_s=0.4, s=0.9,
-                 errors={"m-bad": SECRET}, answer=SECRET),
+                 errors={"m-bad": SECRET, "m-skip": "SKIP", "m-empty": "empty"}, answer=SECRET),
               ev(5.2, "lanes.spoken", did="d1", tier="fast", first=True, text=SECRET),
               ev(9.0, "delegation.done", did="d1", s=5.0, closed=False, answer=SECRET),
               ev(40.0, "call.closed", seconds=40.0, reason="client_closed")]
@@ -222,6 +222,8 @@ class StatsAdapterTest(unittest.TestCase):
         self.assertEqual((lane["firstToken"]["p50"], lane["finish"]["p50"]), (0.4, 0.9))
         self.assertEqual(lane["wins"], [{"model": "m-fast", "count": 1}])
         self.assertEqual(lane["failures"], [{"model": "m-bad", "count": 1}])
+        # A lane that declines (SKIP) or returns nothing is not an error.
+        self.assertEqual(sorted(r["model"] for r in lane["skips"]), ["m-empty", "m-skip"])
         (call,) = payload["calls"]
         self.assertEqual((call["reason"], call["seconds"], call["model"]), ("client_closed", 40.0, "gpt-live-1"))
 

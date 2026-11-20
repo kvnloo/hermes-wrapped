@@ -447,9 +447,12 @@ def calls(voice: VoiceData, w: Window) -> Json:
     for tier, group in _group(lanes, lambda lane: lane.tier).items():
         wins = _group((lane for lane in group if lane.model), lambda lane: lane.model)
         failures: dict[str, int] = defaultdict(int)
+        skips: dict[str, int] = defaultdict(int)
         for lane in group:
             for model in lane.failed:
                 failures[model] += 1
+            for model in lane.skipped:
+                skips[model] += 1
         tiers.append({
             "tier": tier, "runs": len(group), "answered": sum(1 for lane in group if lane.model),
             "spokenFirst": sum(1 for lane in group if lane.spoken == "first"),
@@ -458,6 +461,7 @@ def calls(voice: VoiceData, w: Window) -> Json:
             "finish": _p([lane.s for lane in group]),
             "wins": sorted(({"model": m, "count": len(g)} for m, g in wins.items()), key=lambda r: -r["count"]),
             "failures": sorted(({"model": m, "count": n} for m, n in failures.items()), key=lambda r: -r["count"]),
+            "skips": sorted(({"model": m, "count": n} for m, n in skips.items()), key=lambda r: -r["count"]),
         })
     order = {"fast": 0, "medium": 1, "slow": 2}
     series = defaultdict(lambda: {"calls": 0, "turns": 0, "handoffs": 0})

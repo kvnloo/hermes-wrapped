@@ -108,6 +108,8 @@ export interface VoiceLaneStats {
 	finish: Quantiles;
 	wins: { model: string; count: number }[];
 	failures: { model: string; count: number }[];
+	/** Models that declined on purpose (SKIP: the question needs Hermes) or returned nothing. Not errors. */
+	skips: { model: string; count: number }[];
 }
 
 export interface VoiceCallRow {
