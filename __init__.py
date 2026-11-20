@@ -482,12 +482,35 @@ def _cli_setup(sub) -> None:
     s.add_argument("--deliver", default="telegram", help="Delivery target (default: telegram home channel)")
     s.add_argument("--when", default="0 18 * * 0", help="Cron schedule (default: Sundays 18:00)")
     sp.add_parser("list", help="Recent sessions")
+    stats = sp.add_parser("stats", help="Write a private, offline usage overview as HTML")
+    stats.add_argument("--days", type=int, default=7, metavar="N", help="UTC calendar days (1–365)")
     sp.add_parser("doctor", help="Check Node, npx and ffmpeg")
     sub.set_defaults(func=_cli)
 
 
 def _cli(args) -> int:
     cmd = getattr(args, "wrapped_cmd", None) or ""
+    if cmd == "stats":
+        import sqlite3
+        import sys
+        from tempfile import NamedTemporaryFile
+
+        from .stats import load_stats
+        from .stats_view import render_stats
+
+        try:
+            snapshot = load_stats(store.hermes_home() / "state.db", days=args.days)
+            with NamedTemporaryFile(mode="w", encoding="utf-8", prefix="hermes-stats-",
+                                    suffix=".html", delete=False) as page:
+                page.write(render_stats(snapshot))
+            print(page.name)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        except (sqlite3.Error, OSError):
+            print("Could not read this profile's session store or write the local snapshot.", file=sys.stderr)
+            return 1
+        return 0
     if cmd == "doctor":
         ok, why = _render.hyperframes_available()
         print("ready" if ok else f"not ready: {why}")

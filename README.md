@@ -85,6 +85,14 @@ hermes wrapped list
 
 Videos are saved to `~/.hermes/cache/videos/`.
 
+## Local usage overview
+
+Run `hermes wrapped stats --days 30` and open the printed HTML path in a browser. The default is seven UTC calendar days. Run the command again to refresh. The page shows session records, tool calls, input and output tokens, and recorded estimated cost. It groups lifetime counters by each record's start date, not by request time.
+
+The command reads only the active profile's session counters. It writes a private temporary file with no chat content, scripts, or external assets. It does not start a server or deliver the file to chat. See the [stats and event trace plan](docs/PLAN-event-trace.md) for the dashboard and live trace work.
+
+To run the offline tests from a checkout named `hermes-wrapped`, install `pytest` and run `(cd tests && python3 -m pytest --rootdir=. --confcutdir=. -q)`.
+
 ## How "upkeep" is decided
 
 A session counts as upkeep when it ran inside `~/.hermes`, its title is about Hermes itself (Hermes, gateway, plugins, profiles, providers, config, API keys, changing models), at least 40% of its steps touched Hermes (`~/.hermes`, `config.yaml`, `hermes config|model|auth|plugins|…`), or its title is about setup or fixing and at least 20% of its steps touched Hermes. The video shows the reason next to each upkeep session, so you can see exactly why it counted.
