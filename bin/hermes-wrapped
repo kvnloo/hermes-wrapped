@@ -10,7 +10,7 @@ import os
 import pathlib
 import sys
 
-if os.environ.get("HERMES_AGENT"):
+if os.path.isdir(os.environ.get("HERMES_AGENT", "")):  # Hermes shells set HERMES_AGENT=true; only a directory counts
     sys.path.insert(0, os.environ["HERMES_AGENT"])
     import hermes_bootstrap  # noqa: F401  # Hermes's own dependency path, as the `hermes` launcher sets it up
 
