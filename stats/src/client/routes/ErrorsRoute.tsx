@@ -374,6 +374,7 @@ const FAILURE_COLUMNS: readonly Column<MessageStats>[] = [
 		key: "time",
 		header: "When",
 		width: 120,
+		phone: "caption",
 		sort: row => row.timestamp,
 		render: row => (
 			<span className="muted" title={formatTimestamp(row.timestamp)}>
@@ -384,12 +385,14 @@ const FAILURE_COLUMNS: readonly Column<MessageStats>[] = [
 	{
 		key: "model",
 		header: "Model",
+		phone: "title",
 		sort: row => row.model,
 		render: row => <LabelCell primary={<span className="mono">{row.model}</span>} secondary={row.provider} />,
 	},
 	{
 		key: "error",
 		header: "Error",
+		phone: "caption",
 		sort: row => row.errorMessage ?? "",
 		render: row => (
 			<span className="errors-message" title={row.errorMessage ?? undefined}>
@@ -400,6 +403,7 @@ const FAILURE_COLUMNS: readonly Column<MessageStats>[] = [
 	{
 		key: "project",
 		header: "Project",
+		phone: "caption",
 		sort: row => row.folder,
 		render: row => (
 			<span className="mono muted" title={row.folder}>
@@ -411,6 +415,7 @@ const FAILURE_COLUMNS: readonly Column<MessageStats>[] = [
 		key: "tokens",
 		header: "Tokens",
 		align: "right",
+		phone: false,
 		sort: row => row.usage.totalTokens,
 		render: row => <span className="num">{formatInteger(row.usage.totalTokens)}</span>,
 	},
@@ -419,6 +424,7 @@ const FAILURE_COLUMNS: readonly Column<MessageStats>[] = [
 		header: "Cost",
 		title: "API-equivalent estimate",
 		align: "right",
+		phone: "value",
 		sort: row => row.usage.cost.total,
 		render: row => <span className="num">{formatMessageCost(row, 4)}</span>,
 	},

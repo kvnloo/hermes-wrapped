@@ -1,12 +1,12 @@
-import { Menu } from "lucide-react";
+import { Check, ChevronDown, Menu, MoreHorizontal } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { rangeMeta, TIME_RANGES } from "../data/range";
 import { useLiveStatus } from "../data/live";
 import type { TimeRange } from "../types";
-import { Segmented } from "../ui";
+import { Drawer, Segmented } from "../ui";
 import { isDialogOpen, isTypingTarget } from "./keys";
 import { LiveChip } from "./LiveChip";
-import { type DashboardSection, NAV } from "./nav";
+import { type DashboardSection, NAV, navItem, PHONE_TABS } from "./nav";
 import { ThemeToggle } from "./ThemeToggle";
 
 export interface ShellProps {
@@ -23,13 +23,24 @@ const RANGE_OPTIONS = TIME_RANGES.map((range, i) => ({
 	title: `${rangeMeta(range).windowLabel} (${i + 1})`,
 }));
 
+/** The phone's bottom sheets; one at a time. */
+type PhoneSheet = "pages" | "range" | null;
+
+/** "the last 7 days" -> "Last 7 days", "all time" -> "All time". */
+function rangeName(range: TimeRange): string {
+	const words = rangeMeta(range).windowLabel.replace(/^the /, "");
+	return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /**
  * Fixed glass topbar + naked sidebar framing one inset content panel. Owns
  * the global keyboard shortcuts: `1`–`6` pick a range, `g` then a letter jumps
- * to a page.
+ * to a page. On a phone (styles: phone.css) the sidebar gives way to a tab bar
+ * at the bottom, and the range and the full page list open as bottom sheets.
  */
 export function Shell({ section, onSectionChange, range, onRangeChange, children }: ShellProps) {
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [sheet, setSheet] = useState<PhoneSheet>(null);
 	const scrolled = useScrolled();
 	const { sync } = useLiveStatus();
 	useShortcuts(onSectionChange, onRangeChange);
@@ -37,10 +48,13 @@ export function Shell({ section, onSectionChange, range, onRangeChange, children
 	const go = (next: DashboardSection) => {
 		onSectionChange(next);
 		setMenuOpen(false);
+		setSheet(null);
 		window.scrollTo({ top: 0 });
 	};
 
 	const progress = sync.phase === "syncing" ? (sync.total > 0 ? sync.current / sync.total : null) : undefined;
+	const tab = PHONE_TABS.indexOf(section);
+	const group = NAV.find(g => g.items.some(item => item.id === section))?.heading.toLowerCase();
 
 	return (
 		<>
@@ -77,6 +91,17 @@ export function Shell({ section, onSectionChange, range, onRangeChange, children
 						<LiveChip />
 					</span>
 					<Segmented options={RANGE_OPTIONS} value={range} onChange={onRangeChange} aria-label="Time range" />
+					<button
+						type="button"
+						className="btn range-pill"
+						aria-haspopup="dialog"
+						aria-expanded={sheet === "range"}
+						aria-label={`Range: ${rangeName(range)}`}
+						onClick={() => setSheet("range")}
+					>
+						{rangeMeta(range).label}
+						<ChevronDown size={14} />
+					</button>
 					<ThemeToggle />
 				</div>
 				{progress !== undefined && (
@@ -92,25 +117,7 @@ export function Shell({ section, onSectionChange, range, onRangeChange, children
 
 			{menuOpen && <div className="drawer-scrim" onClick={() => setMenuOpen(false)} role="presentation" />}
 			<nav className="sidebar" data-open={menuOpen} aria-label="Pages">
-				{NAV.map(group => (
-					<div key={group.heading} className="nav-group">
-						<div className="nav-heading">{group.heading}</div>
-						{group.items.map(item => (
-							<button
-								key={item.id}
-								type="button"
-								className="nav-row"
-								data-active={item.id === section}
-								aria-current={item.id === section ? "page" : undefined}
-								onClick={() => go(item.id)}
-							>
-								<item.icon size={15} />
-								<span className="nav-row-label">{item.label}</span>
-								<kbd>G {item.hotkey.toUpperCase()}</kbd>
-							</button>
-						))}
-					</div>
-				))}
+				<NavGroups section={section} onGo={go} />
 				<div className="sidebar-foot micro">
 					<span>
 						<span className="kbd">1</span>–<span className="kbd">{TIME_RANGES.length}</span> range
@@ -121,11 +128,97 @@ export function Shell({ section, onSectionChange, range, onRangeChange, children
 				</div>
 			</nav>
 
-			<main className="shell-panel">
+			<main className="shell-panel" data-group={group}>
 				<div className="shell-content">{children}</div>
 			</main>
+
+			<nav className="dock" aria-label="Pages">
+				<div className="dock-tabs" style={{ "--k": tab < 0 ? PHONE_TABS.length : tab }}>
+					<span className="dock-key" aria-hidden="true" />
+					{PHONE_TABS.map(id => {
+						const item = navItem(id);
+						return (
+							<button
+								key={id}
+								type="button"
+								className="dock-tab"
+								data-active={id === section}
+								aria-current={id === section ? "page" : undefined}
+								onClick={() => go(id)}
+							>
+								<item.icon size={20} />
+								<span>{item.short ?? item.label}</span>
+							</button>
+						);
+					})}
+					{/* More opens every page; it lights up while you are on a page off the tab bar. */}
+					<button
+						type="button"
+						className="dock-tab"
+						data-active={tab < 0}
+						aria-haspopup="dialog"
+						aria-expanded={sheet === "pages"}
+						onClick={() => setSheet("pages")}
+					>
+						<MoreHorizontal size={20} />
+						<span>More</span>
+					</button>
+				</div>
+			</nav>
+			<Drawer open={sheet === "pages"} onClose={() => setSheet(null)} title="Pages" subtitle={rangeMeta(range).windowLabel}>
+				<nav className="sheet-nav" aria-label="Pages">
+					<NavGroups section={section} onGo={go} />
+				</nav>
+			</Drawer>
+			<Drawer open={sheet === "range"} onClose={() => setSheet(null)} title="Range" subtitle="Every page shows this window">
+				<div className="sheet-nav" role="radiogroup" aria-label="Time range">
+					<div className="nav-group">
+						{TIME_RANGES.map(option => (
+							<button
+								key={option}
+								type="button"
+								role="radio"
+								aria-checked={option === range}
+								className="nav-row"
+								data-active={option === range}
+								onClick={() => {
+									onRangeChange(option);
+									setSheet(null);
+								}}
+							>
+								<span className="range-key">{rangeMeta(option).label}</span>
+								<span className="nav-row-label">{rangeName(option)}</span>
+								{option === range && <Check size={18} className="range-check" />}
+							</button>
+						))}
+					</div>
+				</div>
+			</Drawer>
 		</>
 	);
+}
+
+/** Every page by group: the desktop sidebar, and the phone's page sheet. */
+function NavGroups({ section, onGo }: { section: DashboardSection; onGo: (section: DashboardSection) => void }) {
+	return NAV.map(group => (
+		<div key={group.heading} className="nav-group">
+			<div className="nav-heading">{group.heading}</div>
+			{group.items.map(item => (
+				<button
+					key={item.id}
+					type="button"
+					className="nav-row"
+					data-active={item.id === section}
+					aria-current={item.id === section ? "page" : undefined}
+					onClick={() => onGo(item.id)}
+				>
+					<item.icon size={15} />
+					<span className="nav-row-label">{item.label}</span>
+					<kbd>G {item.hotkey.toUpperCase()}</kbd>
+				</button>
+			))}
+		</div>
+	));
 }
 
 function useScrolled(): boolean {

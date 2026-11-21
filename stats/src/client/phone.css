@@ -1,0 +1,1354 @@
+/* ==========================================================================
+   Phone (≤ 600px): Sound Atlas's language on the omp dashboard.
+   Content runs full bleed under a tab bar at thumb height; the range and
+   every other page open as bottom sheets. KPIs swipe, tables become rows,
+   charts pin a tooltip on tap, and nothing a finger hits is smaller than
+   44px. Wider screens never match these rules (the first block hides the
+   phone-only controls there). Rationale: docs/MOBILE-DESIGN.md.
+   ========================================================================== */
+
+.dock,
+.drawer-grab,
+.range-pill,
+.insight-more {
+	display: none;
+}
+
+@media (max-width: 600px) {
+	/* ---------------------------------------------------------------- tokens */
+	/* Sound Atlas's night palette: green-black ground, cream ink, warm greys. */
+	:root:not([data-theme="light"]) {
+		--bg: #0d1112;
+		--panel: #0d1112;
+		--card: #141a1b;
+		--raised: #1b2223;
+		--overlay: rgba(20, 26, 27, 0.94);
+		--hover: rgba(236, 232, 223, 0.04);
+		--press: rgba(236, 232, 223, 0.07);
+		--selected: rgba(236, 232, 223, 0.09);
+		--line-1: rgba(236, 232, 223, 0.07);
+		--line-2: rgba(236, 232, 223, 0.11);
+		--line-3: rgba(236, 232, 223, 0.17);
+		--line-4: rgba(236, 232, 223, 0.26);
+		--ink-1: #ece8df;
+		--ink-2: #bdb8ae;
+		--ink-3: #8f8a80;
+		--ink-4: #5d5a54;
+		--ink-inverse: #0d1112;
+		--accent-a: #5fd3dc;
+		--focus: #5fd3dc;
+		--chart-primary: #5fd3dc;
+		--chart-grid: rgba(236, 232, 223, 0.06);
+		--chart-axis: #77736b;
+		--sheen: 0 -18px 50px rgba(0, 0, 0, 0.45);
+		--card-shadow: none;
+		/* One colour per page group (Usage, Activity, Insights), like Sound Atlas's feels. */
+		--g-usage: #5fd3dc;
+		--g-activity: #ff86b8;
+		--g-insights: #f5b54a;
+	}
+
+	/* The same family by day: warm paper, ink that keeps its green. */
+	[data-theme="light"] {
+		--bg: #f3f0e9;
+		--panel: #f3f0e9;
+		--card: #fcfaf6;
+		--raised: #ece8df;
+		--overlay: rgba(252, 250, 246, 0.95);
+		--hover: rgba(27, 32, 33, 0.035);
+		--press: rgba(27, 32, 33, 0.06);
+		--selected: rgba(27, 32, 33, 0.07);
+		--line-1: rgba(27, 32, 33, 0.08);
+		--line-2: rgba(27, 32, 33, 0.13);
+		--line-3: rgba(27, 32, 33, 0.19);
+		--line-4: rgba(27, 32, 33, 0.28);
+		--ink-1: #1b2021;
+		--ink-2: #45423c;
+		/* 5:1 on the cards: muted text still reads in sunlight. */
+		--ink-3: #686359;
+		--ink-4: #ada79c;
+		--accent-a: #13808a;
+		--focus: #13808a;
+		--chart-primary: #1ba7b2;
+		--chart-axis: #7d776c;
+		--sheen: 0 -14px 40px rgba(60, 50, 30, 0.12);
+		--card-shadow: 0 1px 2px rgba(60, 50, 30, 0.06), 0 8px 24px -14px rgba(60, 50, 30, 0.22);
+		--g-usage: #13808a;
+		--g-activity: #c2306f;
+		--g-insights: #9a6400;
+	}
+
+	:root {
+		--font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+		--spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+		--glide: cubic-bezier(0.2, 0.8, 0.2, 1);
+		--sat: env(safe-area-inset-top, 0px);
+		--sab: env(safe-area-inset-bottom, 0px);
+		--sal: env(safe-area-inset-left, 0px);
+		--sar: env(safe-area-inset-right, 0px);
+		--topbar-h: calc(52px + var(--sat));
+		--gutter: 16px;
+		/* tabs (56) + padding (6 + 2) */
+		--dock-h: calc(64px + var(--sab));
+	}
+
+	/* The page's group colour tints its section headers. */
+	.shell-panel,
+	.sheet-nav .nav-group:nth-child(1) {
+		--c: var(--g-usage);
+	}
+
+	.shell-panel[data-group="activity"],
+	.sheet-nav .nav-group:nth-child(2) {
+		--c: var(--g-activity);
+	}
+
+	.shell-panel[data-group="insights"],
+	.sheet-nav .nav-group:nth-child(3) {
+		--c: var(--g-insights);
+	}
+
+	body {
+		font-size: 15px;
+		line-height: 1.45;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	/* ---------------------------------------------------------------- top bar */
+	/* Nearly opaque, so scrolled figures never ghost through the brand. */
+	.topbar {
+		height: var(--topbar-h);
+		padding: var(--sat) calc(4px + var(--sar)) 0 calc(16px + var(--sal));
+		gap: 6px;
+		background: color-mix(in srgb, var(--bg) 94%, transparent);
+	}
+
+	.topbar-menu,
+	.topbar-actions > .segmented,
+	.sidebar {
+		display: none !important;
+	}
+
+	.topbar-brand {
+		gap: 8px;
+		font: 800 13px/1 var(--font-sans);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.topbar-slash {
+		display: none;
+	}
+
+	.topbar-title {
+		font: 400 11px/1 var(--font-mono);
+		letter-spacing: 0;
+		text-transform: none;
+		color: var(--ink-3);
+	}
+
+	.topbar-actions {
+		gap: 0;
+	}
+
+	/* Freshness stays on screen as a dot and an age ("4h ago"); the word is the dot's colour. */
+	.topbar-hide-narrow {
+		display: inline-flex !important;
+	}
+
+	.live-chip {
+		height: 44px;
+		padding: 0 8px;
+		border: 0;
+		background: none;
+		gap: 6px;
+	}
+
+	.live-chip > span:not(.dot):not(.live-chip-count) {
+		display: none;
+	}
+
+	.live-chip-count {
+		font-size: 11.5px;
+		color: var(--ink-3);
+	}
+
+	.btn[data-icon="true"],
+	.btn[data-icon="true"][data-size="sm"] {
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+	}
+
+	/* Range and theme read as controls: a hairline pill and a hairline ring, each a 44px target. The
+	   shape is drawn by ::before, so a touch's sticky :hover must not paint the square box behind it. */
+	.range-pill,
+	.range-pill:hover:not(:disabled),
+	.topbar-actions > .btn[data-icon="true"],
+	.topbar-actions > .btn[data-icon="true"]:hover:not(:disabled) {
+		position: relative;
+		isolation: isolate;
+		display: inline-flex;
+		border: 0;
+		background: none;
+	}
+
+	.range-pill {
+		gap: 4px;
+		padding: 0 14px 0 16px;
+		font: 600 13.5px/1 var(--font-mono);
+		color: var(--ink-1);
+	}
+
+	.range-pill::before,
+	.topbar-actions > .btn[data-icon="true"]::before {
+		content: "";
+		position: absolute;
+		inset: 5px 2px;
+		z-index: -1;
+		border-radius: 999px;
+		border: 1px solid var(--line-3);
+		background: var(--card);
+	}
+
+	.topbar-actions > .btn[data-icon="true"]::before {
+		inset: 5px;
+	}
+
+	.range-pill svg {
+		color: var(--ink-3);
+	}
+
+	/* ---------------------------------------------------------------- canvas */
+	.shell-ambient {
+		background:
+			radial-gradient(28rem 18rem at 0% -6%, color-mix(in srgb, var(--accent-a) 9%, transparent), transparent 70%),
+			radial-gradient(22rem 16rem at 100% -8%, color-mix(in srgb, var(--accent-b) 6%, transparent), transparent 70%);
+	}
+
+	/* No stacking context of its own (z-index auto): a sheet or scrim opened from inside a card must cover
+	   the top bar and the tab bar, not sit under them. */
+	.shell-panel {
+		z-index: auto;
+		margin: var(--topbar-h) 0 0;
+		min-height: 0;
+		background: none;
+		border: 0;
+		border-radius: 0;
+		box-shadow: none;
+		overflow: visible;
+		overflow-x: clip;
+	}
+
+	.shell-content {
+		padding: 14px calc(var(--gutter) + var(--sar)) calc(var(--dock-h) + 32px) calc(var(--gutter) + var(--sal));
+	}
+
+	.page {
+		gap: 14px;
+	}
+
+	.page-header {
+		padding: 6px 2px 4px;
+		gap: 12px;
+	}
+
+	.page-title {
+		font: italic 400 38px/1 var(--font-serif);
+		letter-spacing: -0.005em;
+	}
+
+	/* Sound Atlas's track description: two lines, a tap shows the rest. */
+	.page-description {
+		margin-top: 8px;
+		font-size: 14px;
+		line-height: 1.45;
+		color: var(--ink-3);
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		cursor: pointer;
+	}
+
+	.page-description[data-open="true"] {
+		-webkit-line-clamp: unset;
+	}
+
+	.page-actions,
+	.page-actions > * {
+		width: 100%;
+	}
+
+	.grid {
+		gap: 14px;
+	}
+
+	/* ---------------------------------------------------------------- cards */
+	.card {
+		border-radius: 20px;
+		border: 1px solid var(--line-2);
+		background: var(--card);
+		box-shadow: var(--card-shadow);
+	}
+
+	.card-header {
+		padding: 16px 16px 0;
+		gap: 10px;
+	}
+
+	/* Sound Atlas's section header: the group colour, uppercase and tracked, behind a glowing dot. */
+	.card-title {
+		font: 800 12px/1.3 var(--font-sans);
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c, var(--ink-1));
+	}
+
+	.card-title:not(:has(svg, .dot))::before {
+		content: "";
+		flex: none;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--c);
+		box-shadow: 0 0 10px var(--c);
+	}
+
+	.card-title svg {
+		color: var(--c);
+	}
+
+	.card-description {
+		font-size: 13px;
+		line-height: 1.4;
+		color: var(--ink-3);
+	}
+
+	/* A lone link stays beside the title; a switch or a filter drops under it and takes the full width. */
+	.card-actions {
+		gap: 8px;
+	}
+
+	.card-actions:has(> .segmented, > .search, > select) {
+		width: 100%;
+	}
+
+	.card-actions > .segmented {
+		flex: 1;
+	}
+
+	.card-header:has(> .card-actions > :is(.btn, .explain):only-child) {
+		flex-wrap: nowrap;
+	}
+
+	.card-actions > :is(.btn, .explain):only-child {
+		margin: -10px -10px 0 0;
+	}
+
+	.card-body {
+		padding: 14px 16px 16px;
+	}
+
+	.card-body[data-flush="true"] {
+		padding: 6px 0 0;
+	}
+
+	.card-footer {
+		padding: 12px 16px;
+		font-size: 13px;
+	}
+
+	.section-label {
+		font: 600 10.5px/1.3 var(--font-mono);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	/* The written summary is tinted like Sound Atlas's track card, in the Insights colour. */
+	.card:has(.insight-summary) {
+		--c: var(--g-insights);
+		border-color: color-mix(in srgb, var(--c) 34%, var(--line-2));
+		background: color-mix(in srgb, var(--c) 6%, var(--card));
+	}
+
+	/* Overview leads with its numbers: header, then the KPI row, then the summary. */
+	.page:has(> .card .insight-summary) > .page-header {
+		order: -2;
+	}
+
+	.page:has(> .card .insight-summary) > .stack:has(> .stat-grid) {
+		display: contents;
+	}
+
+	.page:has(> .card .insight-summary) > .stack > .stat-grid:first-child {
+		order: -1;
+	}
+
+	/* `display: contents` drops the wrapper's own dimming; the tiles carry it instead. */
+	.page:has(> .card .insight-summary) > .stack[data-stale="true"] > .stat-grid {
+		opacity: 0.55;
+	}
+
+	/* The banner's summary: four lines, then "Read all" (Sound Atlas's track description). */
+	.insight-summary-text[data-clamp="true"] {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 4;
+		overflow: hidden;
+	}
+
+	.insight-more {
+		display: inline-flex;
+		align-self: flex-start;
+		margin: -10px 0 -4px -14px;
+		color: var(--c);
+	}
+
+	/* ---------------------------------------------------------------- KPIs */
+	/* Headline tiles: one swipeable row that runs edge to edge and snaps tile by tile. */
+	.stat-grid {
+		display: flex;
+		gap: 10px;
+		margin: 0 calc(-1 * var(--gutter));
+		padding: 2px var(--gutter) 4px;
+		overflow-x: auto;
+		overflow-y: hidden;
+		overscroll-behavior-x: contain;
+		scroll-snap-type: x mandatory;
+		scroll-padding-inline: var(--gutter);
+		scrollbar-width: none;
+		background: none;
+		border: 0;
+		border-radius: 0;
+		box-shadow: none;
+		mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+	}
+
+	.stat-grid::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Each tile is as wide as its figure, like Sound Atlas's chips: a model name gets room, a count stays
+	   compact, and the next tile always peeks in at the edge. */
+	.stat-grid > .stat {
+		flex: 0 0 auto;
+		width: max-content;
+		min-width: 136px;
+		max-width: 78%;
+		scroll-snap-align: start;
+		padding: 14px 16px 12px;
+		gap: 4px;
+		border-radius: 18px;
+		border: 1px solid var(--line-2);
+		background: var(--card);
+		box-shadow: var(--card-shadow);
+	}
+
+	.stat-label {
+		font: 600 10.5px/1.3 var(--font-mono);
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		color: var(--ink-3);
+	}
+
+	.stat-value {
+		font-size: 27px;
+		font-weight: 700;
+		letter-spacing: -0.035em;
+		line-height: 1.1;
+	}
+
+	.stat-foot {
+		font-size: 12px;
+	}
+
+	/* Secondary tiles: a dense two-column card, all of them on screen at once. The 1px gaps over a
+	   hairline-coloured ground draw the dividers, so no cell draws its own edge. */
+	.stat-grid:has(> .stat[data-size="sm"]) {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1px;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		border-radius: 20px;
+		border: 1px solid var(--line-2);
+		background: var(--line-1);
+		box-shadow: var(--card-shadow);
+		mask-image: none;
+	}
+
+	.stat-grid:has(> .stat[data-size="sm"]) > .stat {
+		width: auto;
+		min-width: 0;
+		max-width: none;
+		padding: 12px 16px;
+		border: 0;
+		border-radius: 0;
+		background: var(--card);
+		box-shadow: none;
+	}
+
+	/* An odd last tile takes the whole line instead of leaving a hole. */
+	.stat-grid:has(> .stat[data-size="sm"]) > .stat:last-child:nth-child(odd) {
+		grid-column: 1 / -1;
+	}
+
+	.stat-grid > .stat[data-size="sm"] .stat-label {
+		white-space: normal;
+	}
+
+	.stat[data-size="sm"] .stat-value {
+		font-size: 19px;
+		font-weight: 650;
+	}
+
+	/* ---------------------------------------------------------------- controls */
+	.btn,
+	.btn[data-size="sm"] {
+		min-height: 44px;
+		height: auto;
+		padding: 0 14px;
+		border-radius: 12px;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.btn:active:not(:disabled) {
+		transform: scale(0.96);
+		transition: transform 300ms var(--spring);
+	}
+
+	.input,
+	select.input {
+		height: 44px;
+		padding: 0 14px;
+		border-radius: 14px;
+		/* 16px keeps iOS from zooming into the field on focus. */
+		font-size: 16px;
+	}
+
+	.search,
+	.search .input {
+		width: 100%;
+	}
+
+	/* A filter takes the card's full width; a desktop width passed inline must not cut it short. */
+	.search .input {
+		width: 100% !important;
+		padding-left: 38px;
+		text-overflow: ellipsis;
+	}
+
+	.search svg {
+		left: 13px;
+	}
+
+	.check {
+		min-height: 44px;
+		gap: 10px;
+		font-size: 14px;
+	}
+
+	.check input {
+		width: 20px;
+		height: 20px;
+		margin: 0;
+	}
+
+	/* Segmented: 44px targets inside a soft trough; the key slides on a spring. */
+	.segmented {
+		padding: 0;
+		border-radius: 14px;
+		background: color-mix(in srgb, var(--ink-1) 4.5%, transparent);
+		border: 1px solid var(--line-1);
+		max-width: 100%;
+	}
+
+	.segmented-option,
+	.segmented[data-size="sm"] .segmented-option {
+		flex: 1 1 0;
+		justify-content: center;
+		height: 44px;
+		padding: 0 10px;
+		border-radius: 12px;
+		font-size: 13.5px;
+		font-weight: 600;
+	}
+
+	.segmented-thumb {
+		top: 5px;
+		bottom: 5px;
+		border-radius: 10px;
+		background: var(--raised);
+		border-color: var(--line-2);
+		transition:
+			left 380ms var(--spring),
+			width 380ms var(--spring);
+	}
+
+	[data-theme="light"] .segmented-thumb {
+		background: var(--card);
+		box-shadow: 0 1px 3px rgba(60, 50, 30, 0.14);
+	}
+
+	.badge {
+		height: 22px;
+		padding: 0 8px;
+		font-size: 11.5px;
+	}
+
+	/* ---------------------------------------------------------------- the dock */
+	/* Sound Atlas's sheet edge: one rounded slab at thumb height. Nearly opaque, so scrolled text never
+	   reads through the labels. */
+	.dock {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 45;
+		display: flex;
+		flex-direction: column;
+		padding: 6px calc(8px + var(--sar)) calc(2px + var(--sab)) calc(8px + var(--sal));
+		border: 1px solid var(--line-2);
+		border-bottom: 0;
+		border-radius: 22px 22px 0 0;
+		background: color-mix(in srgb, var(--card) 97%, transparent);
+		backdrop-filter: blur(20px) saturate(160%);
+		-webkit-backdrop-filter: blur(20px) saturate(160%);
+		box-shadow: var(--sheen);
+	}
+
+	.dock-tabs {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+
+	.dock-key {
+		position: absolute;
+		top: 5px;
+		bottom: 5px;
+		left: 0;
+		width: 20%;
+		border-radius: 16px;
+		background: color-mix(in srgb, var(--accent-a) 16%, transparent);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-a) 28%, transparent);
+		transform: translateX(calc(var(--k, 0) * 100%));
+		transition: transform 380ms var(--spring);
+	}
+
+	.dock-tab {
+		position: relative;
+		height: 56px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		min-width: 0;
+		padding: 0 2px;
+		font: 600 11.5px/1 var(--font-sans);
+		color: var(--ink-2);
+		transition:
+			color 200ms var(--ease),
+			transform 300ms var(--spring);
+	}
+
+	.dock-tab span {
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.dock-tab[data-active="true"] {
+		color: var(--ink-1);
+	}
+
+	.dock-tab[data-active="true"] svg {
+		color: var(--accent-a);
+	}
+
+	.dock-tab:active {
+		transform: scale(0.92);
+	}
+
+	/* ---------------------------------------------------------------- sheets */
+	/* Every drawer is a bottom sheet: grab handle, 22px shoulders, glides up. */
+	.drawer {
+		top: auto;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		width: auto;
+		max-height: calc(100dvh - var(--sat) - 28px);
+		padding-bottom: var(--sab);
+		border-radius: 22px 22px 0 0;
+		border-bottom: 0;
+		background: var(--overlay);
+		box-shadow: var(--sheen);
+		animation: sheet-in 420ms var(--glide) both;
+	}
+
+	@keyframes sheet-in {
+		from {
+			transform: translateY(100%);
+		}
+		to {
+			transform: none;
+		}
+	}
+
+	.drawer-scrim {
+		background: rgba(5, 8, 9, 0.55);
+	}
+
+	.drawer-grab {
+		display: grid;
+		place-items: center;
+		flex: none;
+		height: 22px;
+		touch-action: none;
+		cursor: grab;
+	}
+
+	.drawer-grab i {
+		width: 38px;
+		height: 5px;
+		border-radius: 3px;
+		background: var(--line-4);
+	}
+
+	.drawer-header {
+		align-items: center;
+		padding: 0 8px 10px 20px;
+		touch-action: none;
+	}
+
+	.drawer-title {
+		font: italic 400 28px/1.05 var(--font-serif);
+		letter-spacing: 0;
+	}
+
+	/* An identifier as the title (a model id) stays mono: smaller, never broken mid-name. */
+	.drawer-title .mono {
+		font: 600 19px/1.2 var(--font-mono);
+		font-style: normal;
+		letter-spacing: -0.01em;
+	}
+
+	/* Title on its own line; the header's controls share one row under it with Close pinned right. */
+	.drawer-header {
+		flex-wrap: wrap;
+		row-gap: 4px;
+	}
+
+	.drawer-titles {
+		flex: 1 1 calc(100% - 56px);
+	}
+
+	.drawer-header > .row {
+		order: 3;
+		flex: 1 1 100%;
+		margin-left: -14px;
+	}
+
+	.drawer-subtitle {
+		margin-top: 4px;
+		font: 400 11.5px/1.3 var(--font-mono);
+	}
+
+	.drawer-body {
+		padding: 14px 16px 24px;
+		gap: 16px;
+		overscroll-behavior: contain;
+	}
+
+	.kv {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	/* The page sheet: grouped rows, each with a tinted icon tile. */
+	.sheet-nav {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+
+	.sheet-nav .nav-heading {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 0 4px 6px;
+		font: 800 11.5px/1 var(--font-sans);
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--c);
+	}
+
+	.sheet-nav .nav-heading::before {
+		content: "";
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--c);
+		box-shadow: 0 0 10px var(--c);
+	}
+
+	/* 50px rows: all twelve pages fit an 844px screen without scrolling the sheet. */
+	.sheet-nav .nav-row {
+		height: 50px;
+		gap: 14px;
+		padding: 0 8px;
+		border-radius: 14px;
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--ink-1);
+	}
+
+	.sheet-nav .nav-row svg {
+		box-sizing: content-box;
+		flex: none;
+		width: 18px;
+		height: 18px;
+		padding: 10px;
+		border-radius: 12px;
+		color: var(--c);
+		background: color-mix(in srgb, var(--c) 15%, transparent);
+	}
+
+	.sheet-nav .nav-row[data-active="true"] {
+		background: color-mix(in srgb, var(--c) 12%, transparent);
+	}
+
+	.sheet-nav .nav-row[data-active="true"] svg {
+		color: var(--ink-inverse);
+		background: var(--c);
+	}
+
+	.sheet-nav .nav-row:active {
+		transform: scale(0.98);
+	}
+
+	.sheet-nav kbd {
+		display: none;
+	}
+
+	/* The range sheet: the short label in the icon tile's place, a check on the current window. */
+	.range-key {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		border-radius: 12px;
+		font: 600 12px/1 var(--font-mono);
+		color: var(--c);
+		background: color-mix(in srgb, var(--c) 15%, transparent);
+	}
+
+	.nav-row[data-active="true"] .range-key {
+		color: var(--ink-inverse);
+		background: var(--c);
+	}
+
+	.sheet-nav .nav-row svg.range-check {
+		padding: 0;
+		background: none;
+		color: var(--c);
+	}
+
+	/* Sections inside a sheet wear the same header as cards. */
+	.drawer .section-label {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font: 800 11.5px/1.3 var(--font-sans);
+		letter-spacing: 0.08em;
+		color: var(--accent-a);
+	}
+
+	.drawer .section-label::before {
+		content: "";
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: currentColor;
+		box-shadow: 0 0 8px currentColor;
+	}
+
+	.drawer .kv-value {
+		font-size: 14.5px;
+	}
+
+	@keyframes sheet-pop {
+		from {
+			opacity: 0;
+			transform: translateY(24px) scale(0.97);
+		}
+	}
+
+	.explain-item {
+		min-height: 44px;
+	}
+
+	/* ---------------------------------------------------------------- charts */
+	.chart-axis text,
+	.chart-marker text {
+		font-size: 11px;
+	}
+
+	/* The tooltip docks above the plot, clear of the finger that asked for it. */
+	.chart-tooltip {
+		left: 0 !important;
+		right: 0 !important;
+		top: auto !important;
+		bottom: calc(100% + 8px);
+		min-width: 0;
+		max-width: none;
+		padding: 10px 12px;
+		border-radius: 14px;
+		background: var(--overlay);
+		font-size: 13px;
+		transition: none;
+		animation: sheet-pop 240ms var(--spring) both;
+	}
+
+	.legend {
+		gap: 6px 16px;
+	}
+
+	.legend-item {
+		font-size: 13px;
+	}
+
+	/* A legend that toggles series is a row of Sound Atlas filter chips: one line that swipes, 44px tall. */
+	.legend:has(> button) {
+		flex-wrap: nowrap;
+		gap: 6px;
+		margin: 0 -16px;
+		padding: 0 16px;
+		overflow-x: auto;
+		scrollbar-width: none;
+		overscroll-behavior-x: contain;
+		mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 44px), transparent);
+	}
+
+	.legend:has(> button)::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* A chip holds a name and a figure; a long model id ellipsizes instead of filling the screen. */
+	button.legend-item {
+		position: relative;
+		isolation: isolate;
+		flex: none;
+		max-width: 72%;
+		min-height: 44px;
+		padding: 0 12px;
+		gap: 7px;
+		font-weight: 600;
+		transition:
+			opacity 200ms var(--ease),
+			transform 300ms var(--spring);
+	}
+
+	button.legend-item::before {
+		content: "";
+		position: absolute;
+		inset: 6px 0;
+		z-index: -1;
+		border-radius: 999px;
+		border: 1px solid var(--line-2);
+		background: var(--raised);
+	}
+
+	button.legend-item .swatch {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+	}
+
+	button.legend-item:active {
+		transform: scale(0.96);
+	}
+
+	/* Ranked rows: the share is a thin bar under the label (a meter), not a tile behind cut-off text. */
+	.bar-list-row {
+		height: 48px;
+		align-items: flex-start;
+		padding: 8px 8px 0;
+	}
+
+	/* A label of name + context (model + provider): the name keeps its width, the context gives way. */
+	.bar-list-label .row > .truncate:first-child {
+		flex: 0 0 auto;
+		max-width: 100%;
+	}
+
+	.bar-list-fill {
+		top: auto;
+		bottom: 8px;
+		left: 8px;
+		height: 3px;
+		max-width: calc(100% - 16px);
+		border-radius: 2px;
+		opacity: 0.85;
+	}
+
+	.waterfall-row {
+		grid-template-columns: minmax(76px, 7rem) minmax(0, 1fr) auto;
+		gap: 10px;
+	}
+
+	.dw-row {
+		grid-template-columns: minmax(84px, 6.5rem) minmax(0, 1fr) 76px;
+		gap: 8px;
+	}
+
+	/* ---------------------------------------------------------------- tables as rows */
+	/* A row is a Sound Atlas list row (Table.tsx sets each cell's data-phone slot):
+	     title ........................ value  >
+	     caption · caption · caption
+	     LABEL    LABEL    LABEL               (figures, three to a line)
+	   Lines are flex lines; tr::before and tr::after are zero-height breaks between them. */
+	.table-wrap {
+		overflow: visible;
+	}
+
+	.table,
+	.table tbody {
+		display: block;
+		width: 100%;
+	}
+
+	.table thead {
+		display: none;
+	}
+
+	.table tbody tr {
+		position: relative;
+		content-visibility: auto;
+		contain-intrinsic-size: auto 96px;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		column-gap: 12px;
+		padding: 12px 16px 13px;
+		border-top: 1px solid var(--line-1);
+		transition: background 200ms var(--ease);
+	}
+
+	.table tbody tr::before,
+	.table tbody tr::after {
+		content: "";
+		flex: 0 0 100%;
+		height: 0;
+	}
+
+	.table tbody tr::before {
+		order: 2;
+	}
+
+	.table tbody tr::after {
+		order: 4;
+	}
+
+	.table tbody tr:first-child {
+		border-top: 0;
+	}
+
+	.table tbody tr[data-clickable="true"]:active {
+		background: var(--press);
+	}
+
+	/* Status as colour on the row's leading edge, as Sound Atlas tints a row by its feel. */
+	.table tbody tr:has(> td:is([data-phone="caption"], [data-phone="value"]) :is(.dot, .badge)[data-tone="bad"]) {
+		box-shadow: inset 3px 0 0 var(--bad);
+	}
+
+	.table tbody tr:has(> td:is([data-phone="caption"], [data-phone="value"]) :is(.dot, .badge)[data-tone="warn"]) {
+		box-shadow: inset 3px 0 0 var(--warn);
+	}
+
+	.table td,
+	.table td:first-child,
+	.table td:last-child,
+	.table td[data-align],
+	.table[data-dense="true"] td {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 3px;
+		min-width: 0;
+		padding: 0;
+		border: 0;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		text-align: left;
+		font-size: 14px;
+	}
+
+	.table td[data-phone="hidden"] {
+		display: none;
+	}
+
+	.table td[data-phone="title"] {
+		order: 0;
+		flex: 1 1 0;
+		font-size: 15px;
+	}
+
+	.table td[data-phone="value"] {
+		order: 1;
+		flex: none;
+		align-items: flex-end;
+		max-width: 45%;
+		font-size: 15px;
+		font-weight: 650;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink-1);
+	}
+
+	/* A chevron after the title line says the row opens. */
+	.table tbody tr[data-clickable="true"] > td[data-phone="title"] {
+		padding-right: 20px;
+	}
+
+	.table tbody tr[data-clickable="true"]:has(> td[data-phone="value"]) > td[data-phone="title"] {
+		padding-right: 0;
+	}
+
+	/* The last value on the title line leaves room for the chevron. */
+	.table tbody tr[data-clickable="true"] > td[data-phone="value"]:not(:has(~ td[data-phone="value"])) {
+		margin-right: 20px;
+	}
+
+	.table td[data-phone="value"] .cell-secondary {
+		display: none;
+	}
+
+	.table td[data-phone="value"] .row {
+		gap: 6px !important;
+		font-size: 13px;
+	}
+
+	.table tbody tr[data-clickable="true"] > td[data-phone="title"]::after {
+		content: "";
+		position: absolute;
+		top: 19px;
+		right: 18px;
+		width: 7px;
+		height: 7px;
+		border-top: 1.5px solid var(--ink-3);
+		border-right: 1.5px solid var(--ink-3);
+		transform: rotate(45deg);
+	}
+
+	/* Captions: one muted mono line, its parts joined by middots. */
+	.table td[data-phone="caption"] {
+		order: 3;
+		flex: 0 1 auto;
+		flex-direction: row;
+		align-items: center;
+		margin-top: 5px;
+		margin-right: -4px;
+		font: 400 12px/1.4 var(--font-mono);
+		color: var(--ink-3);
+	}
+
+	.table td[data-phone="caption"] ~ td[data-phone="caption"]::before {
+		content: "·";
+		margin-right: 8px;
+		color: var(--ink-4);
+	}
+
+	.table td[data-phone="caption"] * {
+		font-family: inherit;
+		font-size: inherit;
+	}
+
+	.table td[data-phone="caption"] .cell-secondary,
+	.table td:is([data-phone="caption"], [data-phone="value"]) .meter {
+		display: none;
+	}
+
+	.table td[data-phone="caption"] .badge {
+		height: 20px;
+		font: 600 11px/1 var(--font-sans);
+	}
+
+	/* Figures: labelled, three to a line. */
+	.table td[data-phone="grid"] {
+		order: 5;
+		flex: 0 0 calc((100% - 24px) / 3);
+		gap: 1px;
+		margin-top: 10px;
+	}
+
+	.table td[data-phone="grid"]::before {
+		content: attr(data-label);
+		font: 600 9.5px/1.3 var(--font-mono);
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		white-space: nowrap;
+	}
+
+	.table .cell-primary {
+		font-weight: 650;
+	}
+
+	.table .cell-secondary {
+		font-size: 12.5px;
+	}
+
+	.table td > * {
+		max-width: 100%;
+	}
+
+	/* The figure, then its bar underneath. */
+	.table .meter-cell {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 5px;
+		width: 100%;
+	}
+
+	.table .meter-cell .meter {
+		width: 100%;
+	}
+
+	/* Expanded detail rows span the card. */
+	.table tbody tr:has(> td[colspan]) {
+		display: block;
+		padding: 0;
+	}
+
+	.table-more {
+		padding: 6px 12px 8px;
+	}
+
+	.table-more .micro {
+		font-size: 12px;
+	}
+
+	/* ---------------------------------------------------------------- insights */
+	.insight-summary-text {
+		font-size: 16px;
+		line-height: 1.55;
+	}
+
+	.insight-actions {
+		gap: 14px;
+	}
+
+	.insight-actions li {
+		padding-left: 34px;
+		gap: 4px;
+		font-size: 14px;
+		line-height: 1.5;
+	}
+
+	.insight-actions li::before {
+		top: 11px;
+		width: 22px;
+		height: 22px;
+		font-size: 12px;
+	}
+
+	.insight-action-head {
+		align-items: center;
+		min-height: 44px;
+	}
+
+	.insight-action-title {
+		min-height: 44px;
+		flex-wrap: wrap;
+		row-gap: 2px;
+		font: italic 400 20px/1.15 var(--font-serif);
+	}
+
+	.insight-action-title .truncate {
+		white-space: normal;
+		overflow: visible;
+	}
+
+	.insight-action-title .badge {
+		font: 600 11px/1 var(--font-sans);
+		font-style: normal;
+	}
+
+	.insight-action-impact {
+		align-self: flex-start;
+		padding-top: 12px;
+		font-size: 14px;
+		color: var(--ink-1);
+	}
+
+	/* Without a written summary the actions stay one line each; on a phone they wrap. */
+	.insight-actions .muted.truncate {
+		white-space: normal;
+	}
+
+	.insight-row {
+		padding: 16px 16px 14px;
+		gap: 12px;
+	}
+
+	.insight-row-title {
+		font: italic 400 23px/1.1 var(--font-serif);
+		letter-spacing: 0;
+		flex-basis: 100%;
+	}
+
+	.insight-impact {
+		flex-direction: row;
+		align-items: baseline;
+		gap: 6px;
+	}
+
+	.insight-impact .num {
+		font-size: 18px;
+	}
+
+	.insight-evidence {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px 14px;
+	}
+
+	.insight-evidence dt {
+		font: 600 9.5px/1.3 var(--font-mono);
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+	}
+
+	.insight-do {
+		font-size: 14.5px;
+	}
+
+	.insight-link {
+		margin-left: -14px;
+	}
+
+	.insight-check {
+		font-size: 14px;
+	}
+}
+
+/* Phones that ask for less motion: no slides, springs or entrances, only state. */
+@media (max-width: 600px) and (prefers-reduced-motion: reduce) {
+	.drawer,
+	.chart-tooltip,
+	.rise {
+		animation: none !important;
+	}
+
+	.dock-key,
+	.segmented-thumb {
+		transition: none !important;
+	}
+}

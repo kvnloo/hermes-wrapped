@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Fragment, type ReactNode, useMemo, useState } from "react";
 import { formatInteger } from "../data/formatters";
+import { isPhone } from "../usePhone";
 import { EmptyState } from "./States";
 
 export interface Column<T> {
@@ -15,9 +16,31 @@ export interface Column<T> {
 	wrap?: boolean;
 	/** Header tooltip. */
 	title?: string;
+	/**
+	 * Place in the phone's row card (phone.css). Default: a figure under its header, three to a line.
+	 * `"title"` heads the card (default: the first shown column), `"value"` sits right of the title,
+	 * `"caption"` joins one muted line under it, `false` leaves it out (the detail a tap opens has it).
+	 */
+	phone?: "title" | "value" | "caption" | false;
+}
+
+/** Where one column's cells sit in the phone's row card. */
+type PhoneSlot = "title" | "value" | "caption" | "grid" | "hidden";
+
+/** Each column's slot; unlabelled lead columns (swatches, ranks) are dropped unless placed. */
+function phoneSlots<T>(columns: readonly Column<T>[]): PhoneSlot[] {
+	const slots = columns.map((c): PhoneSlot => (c.phone === false ? "hidden" : (c.phone ?? (c.header === "" ? "hidden" : "grid"))));
+	if (!slots.includes("title")) {
+		const first = slots.findIndex(s => s !== "hidden");
+		if (first >= 0) slots[first] = "title";
+	}
+	return slots;
 }
 
 export type SortDir = "asc" | "desc";
+
+/** A phone shows each row as a card, so a table there starts with fewer rows. */
+const PHONE_LIMIT = 20;
 
 export interface TableProps<T> {
 	columns: readonly Column<T>[];
@@ -43,11 +66,13 @@ export function Table<T>({
 	onRowClick,
 	selectedKey,
 	initialSort,
-	limit,
+	limit: limitProp,
 	dense,
 	empty,
 	expanded,
 }: TableProps<T>) {
+	const [limit] = useState(() => (limitProp !== undefined && isPhone() ? Math.min(limitProp, PHONE_LIMIT) : limitProp));
+	const slots = useMemo(() => phoneSlots(columns), [columns]);
 	const [sort, setSort] = useState(initialSort ?? null);
 	const [shown, setShown] = useState(limit ?? Number.POSITIVE_INFINITY);
 
@@ -129,11 +154,14 @@ export function Table<T>({
 										}
 										tabIndex={onRowClick ? 0 : undefined}
 									>
-										{columns.map(column => (
+										{columns.map((column, i) => (
 											<td
 												key={column.key}
 												data-align={column.align ?? "left"}
 												data-wrap={column.wrap ?? false}
+												// A phone lays each row out as a card and names its figures with their headers.
+												data-label={typeof column.header === "string" ? column.header : undefined}
+												data-phone={slots[i]}
 											>
 												{column.render(row)}
 											</td>

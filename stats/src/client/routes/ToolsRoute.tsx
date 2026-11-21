@@ -305,6 +305,7 @@ function buildToolColumns(
 			key: "trend",
 			header: "Trend",
 			title: "Calls per bucket over the range",
+			phone: false,
 			render: row => {
 				const values = trends.get(row.tool);
 				return values && values.length > 1 ? (

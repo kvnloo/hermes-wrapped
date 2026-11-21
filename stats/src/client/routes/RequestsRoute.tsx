@@ -221,6 +221,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 	{
 		key: "time",
 		header: "When",
+		phone: "caption",
 		sort: row => row.timestamp,
 		render: row => (
 			<span className="muted" title={formatTimestamp(row.timestamp)}>
@@ -231,6 +232,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 	{
 		key: "project",
 		header: "Project",
+		phone: "caption",
 		sort: row => row.folder,
 		render: row => (
 			<span className="mono muted truncate" title={row.folder} style={{ display: "block", maxWidth: 180 }}>
@@ -243,6 +245,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 		header: "Input",
 		title: "Uncached input tokens",
 		align: "right",
+		phone: false,
 		sort: row => row.usage.input,
 		render: row => <span className="num">{formatCompact(row.usage.input)}</span>,
 	},
@@ -251,6 +254,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 		header: "Cache read",
 		title: "Cache read tokens (hover a cell for cache writes)",
 		align: "right",
+		phone: false,
 		sort: row => row.usage.cacheRead,
 		render: row => (
 			<span className="num" title={`Cache write: ${formatInteger(row.usage.cacheWrite)}`}>
@@ -262,6 +266,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 		key: "output",
 		header: "Output",
 		align: "right",
+		phone: false,
 		sort: row => row.usage.output,
 		render: row => <span className="num">{formatCompact(row.usage.output)}</span>,
 	},
@@ -270,6 +275,7 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 		header: "Cost",
 		title: "API-equivalent estimate",
 		align: "right",
+		phone: "value",
 		sort: row => row.usage.cost.total,
 		render: row => <span className="num">{formatMessageCost(row, 4)}</span>,
 	},
@@ -277,12 +283,14 @@ const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 		key: "duration",
 		header: "Duration",
 		align: "right",
+		phone: "caption",
 		sort: row => row.duration ?? -1,
 		render: row => <span className="num">{formatDurationMs(row.duration)}</span>,
 	},
 	{
 		key: "status",
 		header: "Status",
+		phone: "value",
 		sort: row => requestStatus(row),
 		render: row => {
 			const status = REQUEST_STATUS[requestStatus(row)];

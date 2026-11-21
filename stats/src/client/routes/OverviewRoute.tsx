@@ -30,6 +30,7 @@ import {
 	Badge,
 	Card,
 	ChartSkeleton,
+	type Column,
 	Dot,
 	LabelCell,
 	PageHeader,
@@ -377,40 +378,45 @@ function ShareBreakdown({ view, wide = false }: { view: TokenShareView; wide?: b
 	);
 }
 
-const REQUEST_COLUMNS = [
+const REQUEST_COLUMNS: readonly Column<MessageStats>[] = [
 	{
 		key: "model",
 		header: "Model",
-		render: (row: MessageStats) => <LabelCell primary={row.model} secondary={row.provider} />,
+		render: row => <LabelCell primary={row.model} secondary={row.provider} />,
 	},
 	{
 		key: "time",
 		header: "When",
-		render: (row: MessageStats) => <span className="muted">{formatRelativeTime(row.timestamp)}</span>,
+		phone: "caption",
+		render: row => <span className="muted">{formatRelativeTime(row.timestamp)}</span>,
 	},
 	{
 		key: "tokens",
 		header: "Tokens",
-		align: "right" as const,
-		render: (row: MessageStats) => <span className="num">{formatInteger(row.usage.totalTokens)}</span>,
+		align: "right",
+		phone: false,
+		render: row => <span className="num">{formatInteger(row.usage.totalTokens)}</span>,
 	},
 	{
 		key: "cost",
 		header: "Cost",
-		align: "right" as const,
-		render: (row: MessageStats) => <span className="num">{formatMessageCost(row, 4)}</span>,
+		align: "right",
+		phone: "value",
+		render: row => <span className="num">{formatMessageCost(row, 4)}</span>,
 	},
 	{
 		key: "duration",
 		header: "Duration",
-		align: "right" as const,
-		render: (row: MessageStats) => <span className="num">{formatDurationMs(row.duration)}</span>,
+		align: "right",
+		phone: "caption",
+		render: row => <span className="num">{formatDurationMs(row.duration)}</span>,
 	},
 	{
 		key: "status",
 		header: "Status",
-		align: "right" as const,
-		render: (row: MessageStats) =>
+		align: "right",
+		phone: "value",
+		render: row =>
 			row.errorMessage ? <Badge tone="bad">Failed</Badge> : <Badge tone="ok">OK</Badge>,
 	},
 ];

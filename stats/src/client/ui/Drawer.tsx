@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { isPhone } from "../usePhone";
 
 export interface DrawerProps {
 	open: boolean;
@@ -40,6 +41,40 @@ export function Drawer({ open, onClose, title, subtitle, actions, width, childre
 		};
 	}, [open]);
 
+	// On a phone the drawer is a bottom sheet (phone.css): pull its handle or header down to dismiss it.
+	const drag = (e: React.PointerEvent<HTMLElement>) => {
+		const panel = panelRef.current;
+		if (!panel || !isPhone() || (e.target as Element).closest("button, a, input")) return;
+		const handle = e.currentTarget;
+		const y0 = e.clientY;
+		const t0 = performance.now();
+		handle.setPointerCapture(e.pointerId);
+		// The entrance animation's fill would otherwise win over the inline transform.
+		panel.style.animation = "none";
+		panel.style.transition = "none";
+		const move = (ev: PointerEvent) => {
+			panel.style.transform = `translateY(${Math.max(0, ev.clientY - y0)}px)`;
+		};
+		const up = (ev: PointerEvent) => {
+			handle.removeEventListener("pointermove", move);
+			handle.removeEventListener("pointerup", up);
+			handle.removeEventListener("pointercancel", up);
+			const dy = ev.clientY - y0;
+			const flung = dy > 24 && dy / Math.max(1, performance.now() - t0) > 0.5;
+			if (dy > 96 || flung) {
+				panel.style.transition = "transform 220ms cubic-bezier(0.4, 0, 1, 1)";
+				panel.style.transform = "translateY(100%)";
+				setTimeout(() => onCloseRef.current(), 200);
+				return;
+			}
+			panel.style.transition = "transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+			panel.style.transform = "";
+		};
+		handle.addEventListener("pointermove", move);
+		handle.addEventListener("pointerup", up);
+		handle.addEventListener("pointercancel", up);
+	};
+
 	if (!open) return null;
 	return createPortal(
 		<>
@@ -52,7 +87,10 @@ export function Drawer({ open, onClose, title, subtitle, actions, width, childre
 				tabIndex={-1}
 				style={width !== undefined ? { "--drawer-w": `${width}px` } : undefined}
 			>
-				<header className="drawer-header">
+				<div className="drawer-grab" onPointerDown={drag} aria-hidden="true">
+					<i />
+				</div>
+				<header className="drawer-header" onPointerDown={drag}>
 					<div className="drawer-titles">
 						<h2 className="drawer-title">{title}</h2>
 						{subtitle !== undefined && <div className="drawer-subtitle">{subtitle}</div>}

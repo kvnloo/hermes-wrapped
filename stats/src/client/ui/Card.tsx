@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 export interface CardProps {
 	title?: ReactNode;
@@ -47,13 +47,18 @@ export interface PageHeaderProps {
 	actions?: ReactNode;
 }
 
-/** Title band at the top of every page. */
+/** Title band at the top of every page. A phone clamps the description to two lines; a tap opens it. */
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
+	const [open, setOpen] = useState(false);
 	return (
 		<header className="page-header rise">
 			<div>
 				<h1 className="page-title">{title}</h1>
-				{description !== undefined && <p className="page-description">{description}</p>}
+				{description !== undefined && (
+					<p className="page-description" data-open={open} onClick={() => setOpen(o => !o)}>
+						{description}
+					</p>
+				)}
 			</div>
 			{actions !== undefined && <div className="page-actions">{actions}</div>}
 		</header>

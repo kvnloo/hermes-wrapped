@@ -5,7 +5,8 @@ import { useQuery } from "../data/query";
 import { rangeMeta } from "../data/range";
 import { SNAPSHOT } from "../snapshot";
 import type { Finding, InsightMetric, InsightsReport, Narrative, SentPayload, Severity, TimeRange } from "../types";
-import { Badge, JsonBlock, type Tone } from "../ui";
+import { Badge, Drawer, JsonBlock, type Tone } from "../ui";
+import { usePhone } from "../usePhone";
 import "./insights.css";
 
 /** The server's format_value, so a figure reads the same in a finding, a slot and the summary. */
@@ -92,6 +93,7 @@ export function Summary({ range, report, compact = false }: { range: TimeRange; 
 	const [generated, setGenerated] = useState<{ range: TimeRange; value: Narrative } | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [expanded, setExpanded] = useState(false);
 	const current = generated?.range === range ? generated.value : narrative.data;
 	const byId = new Map(report.findings.map(f => [f.id, f]));
 
@@ -110,7 +112,20 @@ export function Summary({ range, report, compact = false }: { range: TimeRange; 
 	if (current?.status === "verified") {
 		return (
 			<div className="stack insight-summary" style={{ gap: 12 }}>
-				<p className="insight-summary-text">{current.summary}</p>
+				<p className="insight-summary-text" data-clamp={!expanded}>
+					{current.summary}
+				</p>
+				{/* phone.css shows this on a phone, where the summary is clamped to four lines. */}
+				<button
+					type="button"
+					className="btn insight-more"
+					data-variant="ghost"
+					data-size="sm"
+					aria-expanded={expanded}
+					onClick={() => setExpanded(open => !open)}
+				>
+					{expanded ? "Show less" : "Read all"}
+				</button>
 				{current.actions.length > 0 && (
 					<ol className="insight-actions">
 						{current.actions.map(action => {
@@ -201,11 +216,13 @@ const EXPLAINS: Record<string, string[]> = {
 export function Explain({ section, range }: { section: keyof typeof EXPLAINS; range: TimeRange }) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef<HTMLDivElement>(null);
+	// A phone gets a bottom sheet (Drawer closes itself on Esc and its scrim); a desktop, a popover.
+	const phone = usePhone();
 	const report = useQuery(["insights", range], ({ signal }) => getInsights(range, signal), { enabled: open });
 	const detectors = EXPLAINS[section];
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open || phone) return;
 		const close = (e: MouseEvent | KeyboardEvent) => {
 			if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
 		};
@@ -215,10 +232,30 @@ export function Explain({ section, range }: { section: keyof typeof EXPLAINS; ra
 			document.removeEventListener("mousedown", close);
 			document.removeEventListener("keydown", close);
 		};
-	}, [open]);
+	}, [open, phone]);
 
 	const findings = report.data?.findings.filter(f => detectors.includes(f.detector)) ?? [];
 	const checks = report.data?.checks.filter(c => detectors.includes(c.detector) && c.status !== "fired") ?? [];
+	const body =
+		report.data === null ? (
+			<span className="micro">Reading findings…</span>
+		) : (
+			<div className="stack" style={{ gap: 10 }}>
+				{findings.length === 0 && <span className="muted">Nothing to change here in {rangeMeta(range).windowLabel}.</span>}
+				{findings.map(f => (
+					<ExplainItem key={f.id} finding={f} range={range} />
+				))}
+				{checks.map(c => (
+					<div key={c.detector} className="stack" style={{ gap: 2 }}>
+						<span className="explain-check">{c.label}</span>
+						<span className="micro">{c.note}</span>
+					</div>
+				))}
+				<a className="btn" data-variant="ghost" data-size="sm" href={`#/insights?range=${range}`}>
+					All findings <ArrowRight size={13} />
+				</a>
+			</div>
+		);
 
 	return (
 		<div className="explain" ref={ref}>
@@ -232,30 +269,21 @@ export function Explain({ section, range }: { section: keyof typeof EXPLAINS; ra
 			>
 				<Lightbulb size={13} /> Explain
 			</button>
-			{open && (
-				<div className="explain-pop" role="dialog" aria-label="What this chart shows">
-					{report.data === null ? (
-						<span className="micro">Reading findings…</span>
-					) : (
-						<div className="stack" style={{ gap: 10 }}>
-							{findings.length === 0 && (
-								<span className="muted">Nothing to change here in {rangeMeta(range).windowLabel}.</span>
-							)}
-							{findings.map(f => (
-								<ExplainItem key={f.id} finding={f} range={range} />
-							))}
-							{checks.map(c => (
-								<div key={c.detector} className="stack" style={{ gap: 2 }}>
-									<span className="explain-check">{c.label}</span>
-									<span className="micro">{c.note}</span>
-								</div>
-							))}
-							<a className="btn" data-variant="ghost" data-size="sm" href={`#/insights?range=${range}`}>
-								All findings <ArrowRight size={13} />
-							</a>
-						</div>
-					)}
-				</div>
+			{phone ? (
+				<Drawer
+					open={open}
+					onClose={() => setOpen(false)}
+					title="What this shows"
+					subtitle={`Findings and checks for ${rangeMeta(range).windowLabel}`}
+				>
+					{body}
+				</Drawer>
+			) : (
+				open && (
+					<div className="explain-pop" role="dialog" aria-label="What this chart shows">
+						{body}
+					</div>
+				)
 			)}
 		</div>
 	);

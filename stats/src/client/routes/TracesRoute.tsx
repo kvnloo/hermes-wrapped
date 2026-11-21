@@ -83,11 +83,12 @@ export function TracesRoute({ active, session, onOpenSession }: TracesRouteProps
 				),
 				sort: row => (row.title ?? row.file).toLowerCase(),
 			},
-			{ key: "models", header: "Models", render: row => <ModelList models={row.models} /> },
+			{ key: "models", header: "Models", phone: "caption", render: row => <ModelList models={row.models} /> },
 			{
 				key: "started",
 				header: "Started",
 				align: "right",
+				phone: "caption",
 				render: row => (
 					<span className="muted" title={new Date(row.startedAt).toLocaleString()}>
 						{formatRelativeTime(row.startedAt)}
@@ -99,6 +100,7 @@ export function TracesRoute({ active, session, onOpenSession }: TracesRouteProps
 				key: "duration",
 				header: "Duration",
 				align: "right",
+				phone: "caption",
 				render: row => <span className="num">{formatElapsed(row.endedAt - row.startedAt)}</span>,
 				sort: row => row.endedAt - row.startedAt,
 			},
@@ -120,6 +122,7 @@ export function TracesRoute({ active, session, onOpenSession }: TracesRouteProps
 				key: "subagents",
 				header: "Agents",
 				align: "right",
+				phone: false,
 				render: row =>
 					row.subagents > 0 ? (
 						<span className="num">{formatInteger(row.subagents)}</span>
@@ -140,6 +143,7 @@ export function TracesRoute({ active, session, onOpenSession }: TracesRouteProps
 				header: "Cost",
 				align: "right",
 				width: 150,
+				phone: "value",
 				render: row => (
 					<MeterCell
 						value={row.costTotal}

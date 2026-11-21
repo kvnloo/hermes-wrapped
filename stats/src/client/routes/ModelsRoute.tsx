@@ -414,6 +414,7 @@ function buildModelColumns(view: ModelsView, expandedKey: string | null, bucketW
 			header: "Trend",
 			title: `Requests per ${bucketWord}`,
 			width: 112,
+			phone: false,
 			render: row => {
 				const key = modelKey(row.model, row.provider);
 				const values = view.trends.get(key);

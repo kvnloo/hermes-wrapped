@@ -301,6 +301,7 @@ const CALL_COLUMNS: Column<VoiceCallRow>[] = [
 	{
 		key: "when",
 		header: "When",
+		phone: "caption",
 		sort: row => row.startedAt,
 		render: row => (
 			<span className="muted" title={new Date(row.startedAt).toLocaleString()}>
@@ -311,12 +312,14 @@ const CALL_COLUMNS: Column<VoiceCallRow>[] = [
 	{
 		key: "model",
 		header: "Model",
+		phone: "title",
 		render: row => <LabelCell primary={<span className="mono">{row.model}</span>} secondary={`${row.engine} · ${row.profile}`} />,
 	},
 	{
 		key: "length",
 		header: "Length",
 		align: "right",
+		phone: "value",
 		sort: row => row.seconds ?? -1,
 		render: row => <span className="num">{row.seconds === null ? "-" : formatElapsed(row.seconds * 1000)}</span>,
 	},
@@ -356,6 +359,7 @@ const CALL_COLUMNS: Column<VoiceCallRow>[] = [
 		key: "reason",
 		header: "Ended",
 		align: "right",
+		phone: "caption",
 		render: row =>
 			row.reason === null ? (
 				<Badge tone="neutral">no close event</Badge>

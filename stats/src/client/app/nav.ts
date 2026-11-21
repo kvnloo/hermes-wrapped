@@ -31,6 +31,8 @@ export type DashboardSection =
 export interface NavItem {
 	id: DashboardSection;
 	label: string;
+	/** Label where space is tight (the phone tab bar); defaults to `label`. */
+	short?: string;
 	icon: LucideIcon;
 	/** Second key of the `g <key>` jump shortcut. */
 	hotkey: string;
@@ -64,7 +66,7 @@ export const NAV: readonly NavGroup[] = [
 	{
 		heading: "Insights",
 		items: [
-			{ id: "insights", label: "What to change", icon: Lightbulb, hotkey: "i" },
+			{ id: "insights", label: "What to change", short: "Insights", icon: Lightbulb, hotkey: "i" },
 			{ id: "tools", label: "Tools", icon: Wrench, hotkey: "l" },
 			{ id: "frustration", label: "Frustration", icon: Frown, hotkey: "f" },
 			{ id: "projects", label: "Projects", icon: FolderGit2, hotkey: "j" },
@@ -73,6 +75,9 @@ export const NAV: readonly NavGroup[] = [
 ];
 
 export const NAV_ITEMS: readonly NavItem[] = NAV.flatMap(group => group.items);
+
+/** The phone tab bar: the pages a thumb reaches most. Every page, these included, is in its More sheet. */
+export const PHONE_TABS: readonly DashboardSection[] = ["overview", "insights", "requests", "calls"];
 
 export const SECTIONS: readonly DashboardSection[] = NAV_ITEMS.map(item => item.id);
 

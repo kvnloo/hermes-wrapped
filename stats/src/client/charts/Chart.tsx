@@ -8,8 +8,9 @@
  * categorical axes (hour of day, model names).
  */
 
-import { Fragment, type ReactNode, useId, useMemo, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { formatCompact } from "../data/formatters";
+import { usePhone } from "../usePhone";
 import type { ChartKind, ChartSeries, ReferenceLine, SlotMarker } from "./types";
 import { useWidth } from "./useWidth";
 
@@ -61,7 +62,7 @@ export function Chart({
 	series,
 	kind = "bars",
 	stacked = true,
-	height = 220,
+	height: fullHeight = 220,
 	format = formatCompact,
 	formatRight,
 	formatTooltip,
@@ -76,6 +77,8 @@ export function Chart({
 	tooltipExtra,
 }: ChartProps) {
 	const [ref, width] = useWidth<HTMLDivElement>();
+	// A phone screen is short: plots keep their shape at three quarters of the height.
+	const height = usePhone() ? Math.round(fullHeight * 0.75) : fullHeight;
 	const [hover, setHover] = useState<number | null>(null);
 	const patternId = useId().replace(/:/g, "");
 
@@ -161,8 +164,21 @@ export function Chart({
 	const onMove = (event: React.PointerEvent<SVGRectElement>) => {
 		const box = event.currentTarget.getBoundingClientRect();
 		const i = Math.floor((event.clientX - box.left) / (box.width / slots));
-		setHover(i >= 0 && i < slots ? i : null);
+		// Clamped: a captured touch scrub can run past either end of the plot.
+		setHover(slots > 0 ? Math.min(slots - 1, Math.max(0, i)) : null);
 	};
+
+	// A finger has no hover: a tap (pointerup) or a sideways scrub (pan-y passes horizontal moves) pins the
+	// tooltip, a vertical swipe that becomes a page scroll cancels it, and a tap outside the chart drops it.
+	const pinned = hover !== null;
+	useEffect(() => {
+		if (!pinned) return;
+		const away = (e: PointerEvent) => {
+			if (e.pointerType === "touch" && !ref.current?.contains(e.target as Node)) setHover(null);
+		};
+		document.addEventListener("pointerdown", away);
+		return () => document.removeEventListener("pointerdown", away);
+	}, [pinned, ref]);
 
 	const hoverRows =
 		hover === null
@@ -380,9 +396,11 @@ export function Chart({
 						height={plotH}
 						fill="transparent"
 						onPointerMove={onMove}
-						onPointerLeave={() => setHover(null)}
+						onPointerUp={onMove}
+						onPointerCancel={() => setHover(null)}
+						onPointerLeave={e => e.pointerType !== "touch" && setHover(null)}
 						onClick={onSelect && hover !== null ? () => onSelect(hover) : undefined}
-						style={{ cursor: onSelect ? "pointer" : "crosshair" }}
+						style={{ cursor: onSelect ? "pointer" : "crosshair", touchAction: "pan-y" }}
 					/>
 				</svg>
 			)}
